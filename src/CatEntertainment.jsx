@@ -18,7 +18,6 @@ import VisibilityIcon from "@mui/icons-material/Visibility";
 import {
   AdsClickOutlined,
   CloseRounded,
-  PanToolAltOutlined,
   SmartToyOutlined,
 } from "@mui/icons-material";
 
@@ -97,7 +96,6 @@ const SEG_COUNT = 30;
 const GRAVITY = 0.42;
 const DAMPING = 0.984;
 const ITERATIONS = 14;
-// Friction when a node is resting on the floor — kills horizontal velocity
 const FLOOR_FRICTION = 0.55;
 
 function makeRope(x, y, segLen) {
@@ -110,17 +108,14 @@ function makeRope(x, y, segLen) {
 }
 
 function stepRope(nodes, hx, hy, segLen) {
-  const FLOOR = window.innerHeight - 4; // 4px above the very bottom edge
-
+  const FLOOR = window.innerHeight - 4;
   const n = nodes.map((nd) => ({ ...nd }));
 
-  // Pin head
   n[0].x = hx;
   n[0].y = hy;
   n[0].px = hx;
   n[0].py = hy;
 
-  // Verlet integrate
   for (let i = 1; i < n.length; i++) {
     let vx = (n[i].x - n[i].px) * DAMPING;
     let vy = (n[i].y - n[i].py) * DAMPING;
@@ -129,16 +124,13 @@ function stepRope(nodes, hx, hy, segLen) {
     n[i].x += vx;
     n[i].y += vy + GRAVITY;
 
-    // Floor collision — node rests on floor and loses horizontal momentum
     if (n[i].y >= FLOOR) {
       n[i].y = FLOOR;
-      n[i].py = FLOOR + vy * FLOOR_FRICTION; // bleed out vertical bounce
-      // Dampen horizontal sliding so it settles naturally
+      n[i].py = FLOOR + vy * FLOOR_FRICTION;
       n[i].x = n[i].px + vx * FLOOR_FRICTION;
     }
   }
 
-  // Constraint iterations
   for (let iter = 0; iter < ITERATIONS; iter++) {
     for (let i = 0; i < n.length - 1; i++) {
       const dx = n[i + 1].x - n[i].x;
@@ -154,13 +146,8 @@ function stepRope(nodes, hx, hy, segLen) {
         n[i + 1].x -= dx * diff;
         n[i + 1].y -= dy * diff;
       }
-      // Re-apply floor constraint after constraint solving too
-      if (i > 0 && n[i].y > FLOOR) {
-        n[i].y = FLOOR;
-      }
-      if (n[i + 1].y > FLOOR) {
-        n[i + 1].y = FLOOR;
-      }
+      if (i > 0 && n[i].y > FLOOR) n[i].y = FLOOR;
+      if (n[i + 1].y > FLOOR) n[i + 1].y = FLOOR;
     }
   }
 
@@ -414,7 +401,7 @@ function ManualToy({
   );
 }
 
-// ─── Auto Toy ───────────────────────────────────────────────────────────────
+// ─── Auto Toy ─────────────────────────────────────────────────────────────────
 
 function AutoToy({
   cursorObj,
@@ -452,15 +439,13 @@ function AutoToy({
     const MARGIN = 60;
     let raf;
     const loop = () => {
-      // Read speed live from ref so slider changes take effect immediately
-      const TOPSPEED = 1 + speedRef.current * 0.14; // range ~1.1 – 15
+      const TOPSPEED = 1 + speedRef.current * 0.14;
       const ACCEL = 0.05 + speedRef.current * 0.008;
-
-      const p = posRef.current;
-      const t = targetRef.current;
-      const v = velRef.current;
-      const dx = t.x - p.x;
-      const dy = t.y - p.y;
+      const p = posRef.current,
+        t = targetRef.current,
+        v = velRef.current;
+      const dx = t.x - p.x,
+        dy = t.y - p.y;
       const dist = Math.sqrt(dx * dx + dy * dy) || 1;
       v.vx += (dx / dist) * ACCEL;
       v.vy += (dy / dist) * ACCEL;
@@ -668,14 +653,25 @@ export default function CatEntertainmentApp() {
   const [mode, setMode] = useState("manual");
   const [showPanel, setShowPanel] = useState(true);
   const [panelTab, setPanelTab] = useState("tune");
-  const [toySize, setToySize] = useState(36); // 16–200
-  const [trailWidth, setTrailWidth] = useState(24); // 4–64
-  const [trailLength, setTrailLength] = useState(50); // 10–120
-  const [autoSpeed, setAutoSpeed] = useState(40); // 1–100
+  const [toySize, setToySize] = useState(36);
+  const [trailWidth, setTrailWidth] = useState(24);
+  const [trailLength, setTrailLength] = useState(50);
+  const [autoSpeed, setAutoSpeed] = useState(40);
   const [showString, setShowString] = useState(true);
 
   const bg = BACKGROUNDS.find((b) => b.id === bgId);
   const cursorObj = CURSORS.find((c) => c.id === cursorId);
+
+  // ── Prevent mobile scroll/bounce so dragging the toy doesn't move the page ──
+  useEffect(() => {
+    const prevent = (e) => e.preventDefault();
+    document.addEventListener("touchmove", prevent, { passive: false });
+    document.addEventListener("touchstart", prevent, { passive: false });
+    return () => {
+      document.removeEventListener("touchmove", prevent);
+      document.removeEventListener("touchstart", prevent);
+    };
+  }, []);
 
   return (
     <div
@@ -683,10 +679,12 @@ export default function CatEntertainmentApp() {
         ...bg.style,
         minHeight: "100vh",
         width: "100vw",
-        position: "relative",
+        position: "fixed", // fixed instead of relative — prevents iOS rubber-band scroll
+        inset: 0,
         overflow: "hidden",
         cursor: !showPanel && mode === "manual" ? "none" : "default",
         fontFamily: "'Trebuchet MS', sans-serif",
+        touchAction: "none", // tells browser: don't handle any touch gestures
       }}
     >
       <style>{`
@@ -701,6 +699,15 @@ export default function CatEntertainmentApp() {
         @keyframes panelSlide {
           from { opacity:0; transform:translateY(16px); }
           to   { opacity:1; transform:translateY(0); }
+        }
+        /* Prevent elastic scroll on iOS at the html/body level */
+        html, body {
+          overflow: hidden;
+          overscroll-behavior: none;
+          touch-action: none;
+          position: fixed;
+          width: 100%;
+          height: 100%;
         }
       `}</style>
 
@@ -735,7 +742,11 @@ export default function CatEntertainmentApp() {
             position: "fixed",
             top: 20,
             right: 20,
-            width: "max-content",
+            width: { xs: "calc(100vw - 40px)", sm: "max-content" },
+            maxHeight: "calc(100vh - 100px)",
+            overflowY: "auto",
+            // Allow scrolling inside the panel on mobile without moving the page
+            touchAction: "pan-y",
             background: "rgba(0,0,0,0.58)",
             backdropFilter: "blur(20px)",
             borderRadius: 3,
@@ -746,57 +757,61 @@ export default function CatEntertainmentApp() {
             overflow: "hidden",
           }}
         >
-          {/* Header */}
+          {/* Header — stacks logo on top on mobile, side-by-side on larger screens */}
           <Box
             sx={{
               p: "14px 16px 10px",
               borderBottom: "1px solid rgba(255,255,255,0.1)",
             }}
           >
-            <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
+            <Box
+              sx={{
+                display: "flex",
+                flexDirection: { xs: "column", sm: "row" }, // ← stack on mobile
+                alignItems: { xs: "center", sm: "center" },
+                gap: 1.5,
+                textAlign: { xs: "center", sm: "left" },
+              }}
+            >
               <img src={Logo} alt="Cat TV" style={{ width: 81, height: 81 }} />
+
               <IconButton
                 sx={{
                   color: "#ffffff",
                   position: "absolute",
-                  top: 4,
-                  right: 4,
+                  top: 0,
+                  right: 0,
                 }}
                 onClick={() => setShowPanel((p) => !p)}
               >
                 <CloseRounded />
               </IconButton>
+
               <Box
                 sx={{
                   display: "flex",
                   flexDirection: "column",
                   gap: 0.5,
                   flex: 1,
+                  alignItems: { xs: "center", sm: "flex-start" },
                 }}
               >
-                <Box
-                  sx={{
-                    display: "flex",
-                    flexDirection: "column",
-
-                    flex: 1,
-                  }}
+                <Typography
+                  sx={{ fontWeight: 700, fontSize: 20, color: "white" }}
                 >
-                  <Typography
-                    sx={{ fontWeight: 700, fontSize: 20, color: "white" }}
-                  >
-                    Catpurrccino's Interactive
-                  </Typography>
-                </Box>
+                  Catpurrccino's Interactive
+                </Typography>
 
                 <ButtonGroup size="small" variant="outlined">
                   <Button
-                    size="large"
+                    size="medium"
                     startIcon={<AdsClickOutlined />}
                     onClick={() => setMode("manual")}
                     sx={{
                       color: "white",
-                      //   fontSize: 12,
+                      //   py: 2.5,
+                      py: 1,
+                      px: 2.5,
                       borderColor: "rgba(255,255,255,0.3)",
                       background:
                         mode === "manual"
@@ -810,15 +825,16 @@ export default function CatEntertainmentApp() {
                     }}
                   >
                     Manual Mode
-                    {/* 👆 Manual Mode */}
                   </Button>
                   <Button
+                    size="medium"
                     startIcon={<SmartToyOutlined />}
-                    size="large"
                     onClick={() => setMode("auto")}
                     sx={{
                       color: "white",
-                      //   fontSize: 12,
+                      //   py: 2.5,
+                      py: 1,
+                      px: 2.5,
                       borderColor: "rgba(255,255,255,0.3)",
                       background:
                         mode === "auto"
@@ -832,19 +848,18 @@ export default function CatEntertainmentApp() {
                     }}
                   >
                     Auto Move
-                    {/* 🤖 Auto Move */}
                   </Button>
                 </ButtonGroup>
               </Box>
             </Box>
+
             <Typography
               sx={{
-                // pb: 1.5,
                 opacity: 0.5,
                 mt: 1.5,
                 fontSize: 13,
-                // textAlign: "center",
                 color: "white",
+                textAlign: { xs: "center", sm: "left" },
               }}
             >
               {mode === "manual"
@@ -912,7 +927,7 @@ export default function CatEntertainmentApp() {
               </Box>
             )}
 
-            {/* Toys */}
+            {/* Cursors */}
             {panelTab === "cursor" && (
               <Box
                 sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
@@ -995,7 +1010,9 @@ export default function CatEntertainmentApp() {
                     />
                   </>
                 )}
+
                 <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", my: 2 }} />
+
                 <Box
                   sx={{
                     display: "flex",
@@ -1017,6 +1034,7 @@ export default function CatEntertainmentApp() {
                     onChange={(e) => setShowString(e.target.checked)}
                   />
                 </Box>
+
                 {showString && (
                   <>
                     <Slider
@@ -1041,24 +1059,9 @@ export default function CatEntertainmentApp() {
                     />
                   </>
                 )}
-                {/* String toggle */}
               </Box>
             )}
           </Box>
-
-          {/* <Typography
-            sx={{
-              pb: 1.5,
-              opacity: 0.5,
-              fontSize: 11,
-              textAlign: "center",
-              color: "white",
-            }}
-          >
-            {mode === "manual"
-              ? "Move cursor / finger to play"
-              : "Toy roams freely — sit back!"}
-          </Typography> */}
         </Paper>
       )}
 
