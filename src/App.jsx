@@ -1,5 +1,5 @@
 import "./App.css";
-import CatEntertainmentApp from "./CatEntertainment.JSX";
+import CatEntertainmentApp from "./CatEntertainment.jsx";
 
 function App() {
   return (
