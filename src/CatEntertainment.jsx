@@ -662,15 +662,17 @@ export default function CatEntertainmentApp() {
   const bg = BACKGROUNDS.find((b) => b.id === bgId);
   const cursorObj = CURSORS.find((c) => c.id === cursorId);
 
-  // ── Prevent mobile scroll/bounce so dragging the toy doesn't move the page ──
+  // ── Prevent mobile scroll/bounce ──────────────────────────────────────────
+  // Only block touchmove on the game background — NOT touchstart.
+  // Blocking touchstart breaks all button taps. Blocking touchmove on non-panel
+  // elements is enough to stop the page/background from scrolling or bouncing.
   useEffect(() => {
-    const prevent = (e) => e.preventDefault();
-    document.addEventListener("touchmove", prevent, { passive: false });
-    document.addEventListener("touchstart", prevent, { passive: false });
-    return () => {
-      document.removeEventListener("touchmove", prevent);
-      document.removeEventListener("touchstart", prevent);
+    const preventMove = (e) => {
+      if (e.target.closest(".cat-panel")) return; // let panel scroll freely
+      e.preventDefault();
     };
+    document.addEventListener("touchmove", preventMove, { passive: false });
+    return () => document.removeEventListener("touchmove", preventMove);
   }, []);
 
   return (
@@ -679,12 +681,12 @@ export default function CatEntertainmentApp() {
         ...bg.style,
         minHeight: "100vh",
         width: "100vw",
-        position: "fixed", // fixed instead of relative — prevents iOS rubber-band scroll
+        position: "fixed",
         inset: 0,
         overflow: "hidden",
         cursor: !showPanel && mode === "manual" ? "none" : "default",
         fontFamily: "'Trebuchet MS', sans-serif",
-        touchAction: "none", // tells browser: don't handle any touch gestures
+        touchAction: "none",
       }}
     >
       <style>{`
@@ -700,14 +702,16 @@ export default function CatEntertainmentApp() {
           from { opacity:0; transform:translateY(16px); }
           to   { opacity:1; transform:translateY(0); }
         }
-        /* Prevent elastic scroll on iOS at the html/body level */
         html, body {
           overflow: hidden;
           overscroll-behavior: none;
-          touch-action: none;
           position: fixed;
           width: 100%;
           height: 100%;
+        }
+        /* Panel and all its children get normal touch-action so taps work */
+        .cat-panel, .cat-panel * {
+          touch-action: auto;
         }
       `}</style>
 
@@ -738,6 +742,7 @@ export default function CatEntertainmentApp() {
       {showPanel && (
         <Paper
           elevation={8}
+          className="cat-panel"
           sx={{
             position: "fixed",
             top: 20,
@@ -745,8 +750,7 @@ export default function CatEntertainmentApp() {
             width: { xs: "calc(100vw - 40px)", sm: "max-content" },
             maxHeight: "calc(100vh - 100px)",
             overflowY: "auto",
-            // Allow scrolling inside the panel on mobile without moving the page
-            touchAction: "pan-y",
+            touchAction: "pan-y", // allow vertical scroll inside panel
             background: "rgba(0,0,0,0.58)",
             backdropFilter: "blur(20px)",
             borderRadius: 3,
@@ -757,7 +761,7 @@ export default function CatEntertainmentApp() {
             overflow: "hidden",
           }}
         >
-          {/* Header — stacks logo on top on mobile, side-by-side on larger screens */}
+          {/* Header */}
           <Box
             sx={{
               p: "14px 16px 10px",
@@ -767,7 +771,7 @@ export default function CatEntertainmentApp() {
             <Box
               sx={{
                 display: "flex",
-                flexDirection: { xs: "column", sm: "row" }, // ← stack on mobile
+                flexDirection: { xs: "column", sm: "row" },
                 alignItems: { xs: "center", sm: "center" },
                 gap: 1.5,
                 textAlign: { xs: "center", sm: "left" },
@@ -809,7 +813,6 @@ export default function CatEntertainmentApp() {
                     onClick={() => setMode("manual")}
                     sx={{
                       color: "white",
-                      //   py: 2.5,
                       py: 1,
                       px: 2.5,
                       borderColor: "rgba(255,255,255,0.3)",
@@ -832,7 +835,6 @@ export default function CatEntertainmentApp() {
                     onClick={() => setMode("auto")}
                     sx={{
                       color: "white",
-                      //   py: 2.5,
                       py: 1,
                       px: 2.5,
                       borderColor: "rgba(255,255,255,0.3)",
