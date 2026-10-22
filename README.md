@@ -34,7 +34,7 @@ via [render.yaml](render.yaml), not on Vercel. In Render: **New → Blueprint**,
 this repo, and enter an `ADMIN_PASSWORD`. Pushes to `main` redeploy it.
 
 On the free plan the disk is wiped on every deploy or restart, so the admin's
-session length and the TV's look fall back to their defaults (2:30, Garden, Mouse) until set again.
+session length and the TV's look fall back to their defaults (2:30, Ocean, Fish) until set again.
 
 ## Configuration
 

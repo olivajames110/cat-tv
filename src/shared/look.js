@@ -31,8 +31,8 @@ export const LOOK_RANGES = {
 };
 
 export const DEFAULT_LOOK = {
-  bgId: "grassy-field",
-  cursorId: "mouse",
+  bgId: "ocean",
+  cursorId: "fish",
   toySize: 36,
   trailWidth: 24,
   trailLength: 50,
