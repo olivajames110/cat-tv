@@ -25,3 +25,6 @@ dist-ssr
 
 # Server-side settings (admin-chosen session length)
 data
+
+# Full-size scene photos; `npm run scenes` turns them into src/assets/scenes/
+src/assets/scene-backgrounds

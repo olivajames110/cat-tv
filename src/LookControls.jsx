@@ -7,6 +7,7 @@ import {
   Divider,
 } from "@mui/material";
 import { BACKGROUNDS, CURSORS, LOOK_RANGES } from "./shared/look.js";
+import { sceneThumbStyle } from "./scenes.js";
 
 // ─── MUI Slider wrapper ───────────────────────────────────────────────────────
 
@@ -51,8 +52,10 @@ export default function LookControls({ tab, look, onChange, tuneExtra }) {
             key={b.id}
             onClick={() => onChange({ bgId: b.id })}
             sx={{
-              ...b.style,
-              minHeight: 52,
+              ...sceneThumbStyle(b.id),
+              minHeight: 64,
+              alignItems: "flex-end",
+              textShadow: "0 1px 3px rgba(0,0,0,0.8)",
               color: "white",
               fontSize: 12,
               borderRadius: 2,

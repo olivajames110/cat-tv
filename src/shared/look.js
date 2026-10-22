@@ -2,61 +2,16 @@
 // the server (which validates every change), so keep this file free of JSX and
 // asset imports.
 
+// Each scene is a photo in src/assets/scenes/<id>.jpg (see src/scenes.js).
 export const BACKGROUNDS = [
-  {
-    id: "grass",
-    label: "🌿 Garden",
-    style: {
-      background:
-        "radial-gradient(ellipse at 60% 30%, #4ade80 0%, #16a34a 40%, #15803d 100%)",
-    },
-    accent: "#86efac",
-  },
-  {
-    id: "night",
-    label: "🌙 Night",
-    style: {
-      background:
-        "radial-gradient(ellipse at 40% 20%, #1e1b4b 0%, #0f0a2e 50%, #000000 100%)",
-    },
-    accent: "#818cf8",
-  },
-  {
-    id: "sunset",
-    label: "🌅 Sunset",
-    style: {
-      background:
-        "linear-gradient(180deg, #f97316 0%, #ec4899 40%, #7c3aed 100%)",
-    },
-    accent: "#fbbf24",
-  },
-  {
-    id: "snow",
-    label: "❄️ Winter",
-    style: {
-      background:
-        "radial-gradient(ellipse at 50% 0%, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)",
-    },
-    accent: "#0ea5e9",
-  },
-  {
-    id: "desert",
-    label: "🏜️ Desert",
-    style: {
-      background:
-        "linear-gradient(180deg, #fbbf24 0%, #f59e0b 40%, #d97706 100%)",
-    },
-    accent: "#fef3c7",
-  },
-  {
-    id: "ocean",
-    label: "🌊 Ocean",
-    style: {
-      background:
-        "radial-gradient(ellipse at 30% 10%, #0ea5e9 0%, #0284c7 40%, #075985 100%)",
-    },
-    accent: "#7dd3fc",
-  },
+  { id: "grassy-field", label: "🌾 Grassy Field" },
+  { id: "forest-floor", label: "🌲 Forest Floor" },
+  { id: "ocean", label: "🌊 Ocean" },
+  { id: "winter", label: "❄️ Winter" },
+  { id: "window-sill", label: "🪴 Window Sill" },
+  { id: "full-window", label: "🪟 Big Window" },
+  { id: "cozy-floor", label: "🛋️ Cozy Floor" },
+  { id: "catpurrccinos", label: "☕ Catpurrccino's" },
 ];
 
 export const CURSORS = [
@@ -76,7 +31,7 @@ export const LOOK_RANGES = {
 };
 
 export const DEFAULT_LOOK = {
-  bgId: "grass",
+  bgId: "grassy-field",
   cursorId: "mouse",
   toySize: 36,
   trailWidth: 24,

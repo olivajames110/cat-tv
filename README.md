@@ -55,3 +55,13 @@ The admin's session length is saved to `data/settings.json`.
 - A player who closes the page keeps their place for 30 s in line, or 10 s if it's
   their turn.
 - While nobody is playing, the TV falls back to its own Manual / Auto mode.
+
+## Scenes
+
+Scene photos live in `src/assets/scenes/` as TV-sized JPEGs plus phone
+thumbnails. To add one:
+
+1. Drop the full-size photo in `src/assets/scene-backgrounds/` (not committed).
+2. Run `npm run scenes` to generate `<name>.jpg` and `<name>-thumb.jpg`.
+3. Add `{ id: "<name>", label: "..." }` to `BACKGROUNDS` in
+   [src/shared/look.js](src/shared/look.js).

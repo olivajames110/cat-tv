@@ -5,6 +5,7 @@ import useCatSocket, { fmtSeconds, useCountdown } from "./remote/useCatSocket.js
 import useSharedLook from "./remote/useSharedLook.js";
 import LookControls, { Slider } from "./LookControls.jsx";
 import { BACKGROUNDS, CURSORS } from "./shared/look.js";
+import { sceneStyle } from "./scenes.js";
 import {
   Box,
   Typography,
@@ -572,29 +573,18 @@ function JoinPanel({ state }) {
 
 // ─── BG Decorations ───────────────────────────────────────────────────────────
 
+// Falling snow over the Winter photo.
 function BgDecorations({ bgId }) {
-  const [data] = useState(() => ({
-    stars: Array.from({ length: 60 }, () => ({
-      left: Math.random() * 100,
-      top: Math.random() * 70,
-      w: Math.random() * 3 + 1,
-      dur: 2 + Math.random() * 3,
-      delay: Math.random() * 3,
-    })),
-    flakes: Array.from({ length: 40 }, () => ({
+  const [flakes] = useState(() =>
+    Array.from({ length: 40 }, () => ({
       left: Math.random() * 100,
       size: Math.random() * 14 + 8,
       dur: 5 + Math.random() * 8,
       delay: Math.random() * 8,
-    })),
-    blades: Array.from({ length: 30 }, (_, i) => ({
-      left: (i / 30) * 100 + Math.random() * 3,
-      h: 40 + Math.random() * 60,
-      rot: (Math.random() - 0.5) * 20,
-    })),
-  }));
+    }))
+  );
 
-  if (bgId === "night")
+  if (bgId === "winter")
     return (
       <div
         style={{
@@ -604,68 +594,7 @@ function BgDecorations({ bgId }) {
           overflow: "hidden",
         }}
       >
-        {data.stars.map((s, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              left: `${s.left}%`,
-              top: `${s.top}%`,
-              width: s.w,
-              height: s.w,
-              borderRadius: "50%",
-              background: "white",
-              opacity: 0.6,
-              animation: `twinkle ${s.dur}s ease-in-out infinite`,
-              animationDelay: `${s.delay}s`,
-            }}
-          />
-        ))}
-      </div>
-    );
-
-  if (bgId === "grass")
-    return (
-      <div
-        style={{
-          position: "fixed",
-          bottom: 0,
-          left: 0,
-          right: 0,
-          height: 120,
-          pointerEvents: "none",
-        }}
-      >
-        {data.blades.map((b, i) => (
-          <div
-            key={i}
-            style={{
-              position: "absolute",
-              bottom: 0,
-              left: `${b.left}%`,
-              width: 3,
-              height: b.h,
-              background: "#15803d",
-              borderRadius: "2px 2px 0 0",
-              transform: `rotate(${b.rot}deg)`,
-              transformOrigin: "bottom",
-            }}
-          />
-        ))}
-      </div>
-    );
-
-  if (bgId === "snow")
-    return (
-      <div
-        style={{
-          position: "fixed",
-          inset: 0,
-          pointerEvents: "none",
-          overflow: "hidden",
-        }}
-      >
-        {data.flakes.map((f, i) => (
+        {flakes.map((f, i) => (
           <div
             key={i}
             style={{
@@ -691,7 +620,7 @@ function BgDecorations({ bgId }) {
 
 export default function CatEntertainmentApp() {
   const [mode, setMode] = useState("manual");
-  const [showPanel, setShowPanel] = useState(true);
+  const [showPanel, setShowPanel] = useState(false);
   const [panelTab, setPanelTab] = useState("tune");
   const [autoSpeed, setAutoSpeed] = useState(40);
 
@@ -736,7 +665,7 @@ export default function CatEntertainmentApp() {
   return (
     <div
       style={{
-        ...bg.style,
+        ...sceneStyle(bg.id),
         minHeight: "100vh",
         width: "100vw",
         position: "fixed",
@@ -748,10 +677,6 @@ export default function CatEntertainmentApp() {
       }}
     >
       <style>{`
-        @keyframes twinkle {
-          0%,100% { opacity:0.2; transform:scale(1); }
-          50%     { opacity:1;   transform:scale(1.4); }
-        }
         @keyframes snowfall {
           0%   { transform:translateY(-20px) rotate(0deg); }
           100% { transform:translateY(110vh) rotate(360deg); }
