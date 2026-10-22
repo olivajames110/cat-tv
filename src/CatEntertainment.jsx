@@ -925,30 +925,63 @@ export default function CatEntertainmentApp() {
         </Paper>
       )}
 
-      {/* Toggle button */}
-      <Button
-        onClick={() => setShowPanel((p) => !p)}
-        startIcon={showPanel ? <VisibilityOffIcon /> : <VisibilityIcon />}
+      {/* Toggle button (+ Auto Move indicator while the panel is hidden) */}
+      <Box
         sx={{
           position: "fixed",
           bottom: 20,
           left: "50%",
           transform: "translateX(-50%)",
-          px: 3,
-          py: 1.25,
-          background: "rgba(0,0,0,0.45)",
-          border: "1px solid rgba(255,255,255,0.3)",
-          color: "white",
-          borderRadius: 5,
-          backdropFilter: "blur(10px)",
-          fontSize: 14,
-          textTransform: "none",
+          display: "flex",
+          alignItems: "center",
+          gap: 1,
           zIndex: 10001,
-          "&:hover": { background: "rgba(0,0,0,0.65)" },
         }}
       >
-        {showPanel ? "Hide Controls" : "Show Controls"}
-      </Button>
+        <Button
+          onClick={() => setShowPanel((p) => !p)}
+          startIcon={showPanel ? <VisibilityOffIcon /> : <VisibilityIcon />}
+          sx={{
+            px: 3,
+            py: 1.25,
+            background: "rgba(0,0,0,0.45)",
+            border: "1px solid rgba(255,255,255,0.3)",
+            color: "white",
+            borderRadius: 5,
+            backdropFilter: "blur(10px)",
+            fontSize: 14,
+            textTransform: "none",
+            whiteSpace: "nowrap",
+            "&:hover": { background: "rgba(0,0,0,0.65)" },
+          }}
+        >
+          {showPanel ? "Hide Controls" : "Show Controls"}
+        </Button>
+
+        {!showPanel && mode === "auto" && !remoteActive && (
+          <Box
+            sx={{
+              display: "flex",
+              alignItems: "center",
+              gap: 0.75,
+              px: 2,
+              py: 1.25,
+              background: "rgba(0,0,0,0.45)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              color: "white",
+              borderRadius: 5,
+              backdropFilter: "blur(10px)",
+              fontSize: 14,
+              lineHeight: 1.75,
+              whiteSpace: "nowrap",
+              animation: "panelSlide 0.3s ease",
+            }}
+          >
+            <SmartToyOutlined sx={{ fontSize: 18 }} />
+            Auto Move on
+          </Box>
+        )}
+      </Box>
     </div>
   );
 }
