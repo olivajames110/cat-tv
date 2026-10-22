@@ -1,16 +1,48 @@
-# React + Vite
+# Cat TV
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+A toy for cats to chase on a big screen. People nearby scan a QR code on the TV,
+join a line, and when it's their turn their phone becomes a trackpad that moves
+the toy.
 
-Currently, two official plugins are available:
+| Page     | Who opens it                     |
+| -------- | -------------------------------- |
+| `/`      | The TV. Shows the toy and the join QR code. |
+| `/play`  | Phones, via the QR code. Join the line, then drag to move the toy. |
+| `/admin` | The admin. Sets the max session length, skips or removes players. |
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Babel](https://babeljs.io/) (or [oxc](https://oxc.rs) when used in [rolldown-vite](https://vite.dev/guide/rolldown)) for Fast Refresh
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/) for Fast Refresh
+## Running
 
-## React Compiler
+```sh
+npm install
+npm run dev                       # Vite on :5173 + queue server on :3001
+```
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+Open `http://localhost:5173` on the TV machine. The QR code points phones at the
+machine's LAN address, so phones must be on the same network.
 
-## Expanding the ESLint configuration
+Production (one process serves the built app and the WebSocket):
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+```sh
+npm run build
+ADMIN_PASSWORD=choose-one npm start   # http://<host>:3001
+```
+
+## Configuration
+
+| Env var          | Default | Purpose |
+| ---------------- | ------- | ------- |
+| `ADMIN_PASSWORD` | random, printed at startup | Password for `/admin`. |
+| `PORT`           | `3001`  | Server port. |
+| `PUBLIC_URL`     | LAN IP  | Base URL the QR code points to, e.g. when behind a domain or tunnel. |
+
+The admin's session length is saved to `data/settings.json`.
+
+## How a turn works
+
+- The QR code carries a join token that rotates every minute (old codes work for
+  about two), so only people who can see the TV can join.
+- When a turn ends — time's up, the player taps "End my turn", or the admin skips
+  them — the phone has to scan the QR code again to get back in line.
+- A player who closes the page keeps their place for 30 s in line, or 10 s if it's
+  their turn.
+- While nobody is playing, the TV falls back to its own Manual / Auto mode.

@@ -1,5 +1,7 @@
 import { useState, useEffect, useRef, useCallback } from "react";
+import QRCode from "qrcode";
 import Logo from "./assets/logo.png";
+import useCatSocket, { fmtSeconds, useCountdown } from "./remote/useCatSocket.js";
 import {
   Box,
   Typography,
@@ -336,6 +338,49 @@ function useRopePhysics(headPos, segLen) {
   return nodes;
 }
 
+// ─── Toy View (sprite + string) ───────────────────────────────────────────────
+
+function ToyView({
+  pos,
+  cursorObj,
+  toySize,
+  trailWidth,
+  trailLength,
+  showString,
+}) {
+  const segLen = 4 + trailLength * 0.22;
+  const nodes = useRopePhysics(pos, segLen);
+  const isLaser = cursorObj.isLaser;
+  const fontSize = Math.round(cursorObj.baseSize * (toySize / 36));
+  const sw = Math.max(1, trailWidth / 8);
+
+  return (
+    <>
+      {showString && (
+        <RopeTrail nodes={nodes} strokeWidth={sw} isLaser={isLaser} />
+      )}
+      <div
+        style={{
+          position: "fixed",
+          left: pos.x - fontSize / 2,
+          top: pos.y - fontSize / 2,
+          fontSize,
+          pointerEvents: "none",
+          zIndex: 9999,
+          userSelect: "none",
+          lineHeight: 1,
+          filter: isLaser
+            ? "drop-shadow(0 0 10px red) drop-shadow(0 0 22px rgba(255,0,0,0.5))"
+            : "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
+          color: isLaser ? "red" : undefined,
+        }}
+      >
+        {cursorObj.emoji}
+      </div>
+    </>
+  );
+}
+
 // ─── Manual Toy ───────────────────────────────────────────────────────────────
 
 function ManualToy({
@@ -368,36 +413,15 @@ function ManualToy({
     };
   }, []);
 
-  const segLen = 4 + trailLength * 0.22;
-  const nodes = useRopePhysics(pos, segLen);
-  const isLaser = cursorObj.isLaser;
-  const fontSize = Math.round(cursorObj.baseSize * (toySize / 36));
-  const sw = Math.max(1, trailWidth / 8);
-
   return (
-    <>
-      {showString && (
-        <RopeTrail nodes={nodes} strokeWidth={sw} isLaser={isLaser} />
-      )}
-      <div
-        style={{
-          position: "fixed",
-          left: pos.x - fontSize / 2,
-          top: pos.y - fontSize / 2,
-          fontSize,
-          pointerEvents: "none",
-          zIndex: 9999,
-          userSelect: "none",
-          lineHeight: 1,
-          filter: isLaser
-            ? "drop-shadow(0 0 10px red) drop-shadow(0 0 22px rgba(255,0,0,0.5))"
-            : "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
-          color: isLaser ? "red" : undefined,
-        }}
-      >
-        {cursorObj.emoji}
-      </div>
-    </>
+    <ToyView
+      pos={pos}
+      cursorObj={cursorObj}
+      toySize={toySize}
+      trailWidth={trailWidth}
+      trailLength={trailLength}
+      showString={showString}
+    />
   );
 }
 
@@ -465,36 +489,152 @@ function AutoToy({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  const segLen = 4 + trailLength * 0.22;
-  const nodes = useRopePhysics(pos, segLen);
-  const isLaser = cursorObj.isLaser;
-  const fontSize = Math.round(cursorObj.baseSize * (toySize / 36));
-  const sw = Math.max(1, trailWidth / 8);
+  return (
+    <ToyView
+      pos={pos}
+      cursorObj={cursorObj}
+      toySize={toySize}
+      trailWidth={trailWidth}
+      trailLength={trailLength}
+      showString={showString}
+    />
+  );
+}
+
+// ─── Remote Toy (driven from a phone) ─────────────────────────────────────────
+
+// A swipe across the full width of the phone moves the toy this many TV widths.
+const REMOTE_GAIN = 1.2;
+
+function RemoteToy({
+  deltaRef,
+  cursorObj,
+  toySize,
+  trailWidth,
+  trailLength,
+  showString,
+}) {
+  const [pos, setPos] = useState(() => ({
+    x: window.innerWidth / 2,
+    y: window.innerHeight / 2,
+  }));
+  const posRef = useRef(pos);
+
+  useEffect(() => {
+    deltaRef.current = { dx: 0, dy: 0 };
+    let raf;
+    const loop = () => {
+      const d = deltaRef.current;
+      if (d.dx !== 0 || d.dy !== 0) {
+        const W = window.innerWidth;
+        const p = posRef.current;
+        posRef.current = {
+          x: Math.max(0, Math.min(W, p.x + d.dx * W * REMOTE_GAIN)),
+          y: Math.max(
+            0,
+            Math.min(window.innerHeight, p.y + d.dy * W * REMOTE_GAIN)
+          ),
+        };
+        deltaRef.current = { dx: 0, dy: 0 };
+        setPos(posRef.current);
+      }
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, [deltaRef]);
 
   return (
-    <>
-      {showString && (
-        <RopeTrail nodes={nodes} strokeWidth={sw} isLaser={isLaser} />
+    <ToyView
+      pos={pos}
+      cursorObj={cursorObj}
+      toySize={toySize}
+      trailWidth={trailWidth}
+      trailLength={trailLength}
+      showString={showString}
+    />
+  );
+}
+
+// ─── Join QR panel ────────────────────────────────────────────────────────────
+
+function joinUrlFor(state) {
+  const base = state.publicUrl
+    ? new URL(state.publicUrl)
+    : new URL(window.location.origin);
+  // "localhost" on the TV means nothing to a phone; swap in the LAN address.
+  if (
+    !state.publicUrl &&
+    state.lanHost &&
+    ["localhost", "127.0.0.1", "::1"].includes(base.hostname)
+  ) {
+    base.hostname = state.lanHost;
+  }
+  base.pathname = "/play";
+  base.search = `?t=${state.joinToken}`;
+  return base.toString();
+}
+
+function JoinPanel({ state }) {
+  const joinUrl = state?.joinToken ? joinUrlFor(state) : null;
+  const [qr, setQr] = useState(null);
+  const secondsLeft = useCountdown(state?.active?.endsAt);
+
+  useEffect(() => {
+    if (!joinUrl) return;
+    let cancelled = false;
+    QRCode.toDataURL(joinUrl, { margin: 1, width: 360 }).then((url) => {
+      if (!cancelled) setQr(url);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [joinUrl]);
+
+  if (!joinUrl || !qr) return null;
+
+  return (
+    <Paper
+      elevation={8}
+      sx={{
+        position: "fixed",
+        left: 20,
+        bottom: 20,
+        p: 1.5,
+        width: 200,
+        background: "rgba(0,0,0,0.58)",
+        backdropFilter: "blur(20px)",
+        borderRadius: 3,
+        border: "1px solid rgba(255,255,255,0.15)",
+        color: "white",
+        zIndex: 10000,
+        textAlign: "center",
+      }}
+    >
+      <img
+        src={qr}
+        alt="Scan to play"
+        style={{ width: "100%", borderRadius: 8, display: "block" }}
+      />
+      <Typography sx={{ fontWeight: 700, mt: 1, color: "white" }}>
+        📱 Scan to play!
+      </Typography>
+      {state.active ? (
+        <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
+          {state.active.name} is playing · {fmtSeconds(secondsLeft)}
+        </Typography>
+      ) : (
+        <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
+          Nobody's playing — you're next!
+        </Typography>
       )}
-      <div
-        style={{
-          position: "fixed",
-          left: pos.x - fontSize / 2,
-          top: pos.y - fontSize / 2,
-          fontSize,
-          pointerEvents: "none",
-          zIndex: 9999,
-          userSelect: "none",
-          lineHeight: 1,
-          filter: isLaser
-            ? "drop-shadow(0 0 10px red) drop-shadow(0 0 22px rgba(255,0,0,0.5))"
-            : "drop-shadow(0 2px 6px rgba(0,0,0,0.5))",
-          color: isLaser ? "red" : undefined,
-        }}
-      >
-        {cursorObj.emoji}
-      </div>
-    </>
+      {state.queueLength > 0 && (
+        <Typography sx={{ fontSize: 12, color: "white", opacity: 0.6 }}>
+          {state.queueLength} in line
+          {state.upNext.length > 0 && `: ${state.upNext.join(", ")}`}
+        </Typography>
+      )}
+    </Paper>
   );
 }
 
@@ -662,6 +802,16 @@ export default function CatEntertainmentApp() {
   const bg = BACKGROUNDS.find((b) => b.id === bgId);
   const cursorObj = CURSORS.find((c) => c.id === cursorId);
 
+  // ── Phone remote: move deltas accumulate here until RemoteToy consumes them
+  const remoteDeltaRef = useRef({ dx: 0, dy: 0 });
+  const { state: remoteState } = useCatSocket({ role: "display" }, (msg) => {
+    if (msg.type === "move") {
+      remoteDeltaRef.current.dx += msg.dx;
+      remoteDeltaRef.current.dy += msg.dy;
+    }
+  });
+  const remoteActive = !!remoteState?.active;
+
   // ── Prevent mobile scroll/bounce ──────────────────────────────────────────
   // Only block touchmove on the game background — NOT touchstart.
   // Blocking touchstart breaks all button taps. Blocking touchmove on non-panel
@@ -717,7 +867,17 @@ export default function CatEntertainmentApp() {
 
       <BgDecorations bgId={bgId} />
 
-      {mode === "manual" ? (
+      {remoteActive ? (
+        <RemoteToy
+          key="r"
+          deltaRef={remoteDeltaRef}
+          cursorObj={cursorObj}
+          toySize={toySize}
+          trailWidth={trailWidth}
+          trailLength={trailLength}
+          showString={showString}
+        />
+      ) : mode === "manual" ? (
         <ManualToy
           key="m"
           cursorObj={cursorObj}
@@ -737,6 +897,8 @@ export default function CatEntertainmentApp() {
           showString={showString}
         />
       )}
+
+      <JoinPanel state={remoteState} />
 
       {/* ── Control Panel ── */}
       {showPanel && (
