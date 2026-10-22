@@ -27,6 +27,15 @@ npm run build
 ADMIN_PASSWORD=choose-one npm start   # http://<host>:3001
 ```
 
+## Deploying
+
+The queue needs a long-running server with WebSockets, so it's hosted on Render
+via [render.yaml](render.yaml), not on Vercel. In Render: **New → Blueprint**, pick
+this repo, and enter an `ADMIN_PASSWORD`. Pushes to `main` redeploy it.
+
+On the free plan the disk is wiped on every deploy or restart, so the admin's
+session length falls back to the 60 s default until it is set again.
+
 ## Configuration
 
 | Env var          | Default | Purpose |
