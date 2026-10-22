@@ -2,6 +2,9 @@ import { useState, useEffect, useRef, useCallback } from "react";
 import QRCode from "qrcode";
 import Logo from "./assets/logo.png";
 import useCatSocket, { fmtSeconds, useCountdown } from "./remote/useCatSocket.js";
+import useSharedLook from "./remote/useSharedLook.js";
+import LookControls, { Slider } from "./LookControls.jsx";
+import { BACKGROUNDS, CURSORS } from "./shared/look.js";
 import {
   Box,
   Typography,
@@ -9,9 +12,7 @@ import {
   ButtonGroup,
   Tabs,
   Tab,
-  Slider as MuiSlider,
   Paper,
-  Checkbox,
   IconButton,
   Divider,
 } from "@mui/material";
@@ -22,75 +23,6 @@ import {
   CloseRounded,
   SmartToyOutlined,
 } from "@mui/icons-material";
-
-// ─── Constants ───────────────────────────────────────────────────────────────
-
-const BACKGROUNDS = [
-  {
-    id: "grass",
-    label: "🌿 Garden",
-    style: {
-      background:
-        "radial-gradient(ellipse at 60% 30%, #4ade80 0%, #16a34a 40%, #15803d 100%)",
-    },
-    accent: "#86efac",
-  },
-  {
-    id: "night",
-    label: "🌙 Night",
-    style: {
-      background:
-        "radial-gradient(ellipse at 40% 20%, #1e1b4b 0%, #0f0a2e 50%, #000000 100%)",
-    },
-    accent: "#818cf8",
-  },
-  {
-    id: "sunset",
-    label: "🌅 Sunset",
-    style: {
-      background:
-        "linear-gradient(180deg, #f97316 0%, #ec4899 40%, #7c3aed 100%)",
-    },
-    accent: "#fbbf24",
-  },
-  {
-    id: "snow",
-    label: "❄️ Winter",
-    style: {
-      background:
-        "radial-gradient(ellipse at 50% 0%, #e0f2fe 0%, #bae6fd 50%, #7dd3fc 100%)",
-    },
-    accent: "#0ea5e9",
-  },
-  {
-    id: "desert",
-    label: "🏜️ Desert",
-    style: {
-      background:
-        "linear-gradient(180deg, #fbbf24 0%, #f59e0b 40%, #d97706 100%)",
-    },
-    accent: "#fef3c7",
-  },
-  {
-    id: "ocean",
-    label: "🌊 Ocean",
-    style: {
-      background:
-        "radial-gradient(ellipse at 30% 10%, #0ea5e9 0%, #0284c7 40%, #075985 100%)",
-    },
-    accent: "#7dd3fc",
-  },
-];
-
-const CURSORS = [
-  { id: "mouse", label: "🐭 Mouse", emoji: "🐭", baseSize: 36 },
-  { id: "bird", label: "🐦 Bird", emoji: "🐦", baseSize: 34 },
-  { id: "fish", label: "🐟 Fish", emoji: "🐟", baseSize: 34 },
-  { id: "bug", label: "🦋 Butterfly", emoji: "🦋", baseSize: 32 },
-  { id: "laser", label: "🔴 Laser", emoji: "●", baseSize: 18, isLaser: true },
-  { id: "yarn", label: "🧶 Yarn", emoji: "🧶", baseSize: 36 },
-  { id: "feather", label: "🪶 Feather", emoji: "🪶", baseSize: 32 },
-];
 
 // ─── Rope Physics (Verlet) ────────────────────────────────────────────────────
 
@@ -755,62 +687,38 @@ function BgDecorations({ bgId }) {
   return null;
 }
 
-// ─── MUI Slider wrapper ───────────────────────────────────────────────────────
-
-function Slider({ label, value, min, max, step, onChange, fmt }) {
-  return (
-    <Box sx={{ mb: 2 }}>
-      <Box sx={{ display: "flex", justifyContent: "space-between", mb: 0 }}>
-        <Typography variant="caption" sx={{ color: "rgba(255,255,255,0.8)" }}>
-          {label}
-        </Typography>
-        <Typography variant="caption" sx={{ color: "white", fontWeight: 700 }}>
-          {fmt ? fmt(value) : value}
-        </Typography>
-      </Box>
-      <MuiSlider
-        min={min}
-        max={max}
-        step={step}
-        value={value}
-        onChange={(_, v) => onChange(v)}
-        size="small"
-        sx={{
-          color: "white",
-          "& .MuiSlider-thumb": { width: 14, height: 14 },
-          "& .MuiSlider-rail": { opacity: 0.3 },
-        }}
-      />
-    </Box>
-  );
-}
-
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 export default function CatEntertainmentApp() {
-  const [bgId, setBgId] = useState("grass");
-  const [cursorId, setCursorId] = useState("mouse");
   const [mode, setMode] = useState("manual");
   const [showPanel, setShowPanel] = useState(true);
   const [panelTab, setPanelTab] = useState("tune");
-  const [toySize, setToySize] = useState(36);
-  const [trailWidth, setTrailWidth] = useState(24);
-  const [trailLength, setTrailLength] = useState(50);
   const [autoSpeed, setAutoSpeed] = useState(40);
-  const [showString, setShowString] = useState(true);
 
-  const bg = BACKGROUNDS.find((b) => b.id === bgId);
-  const cursorObj = CURSORS.find((c) => c.id === cursorId);
-
-  // ── Phone remote: move deltas accumulate here until RemoteToy consumes them
+  // ── Phone remote: move deltas accumulate here until RemoteToy consumes them.
+  // The look (scene, cursor, sizes) is shared with the active phone.
   const remoteDeltaRef = useRef({ dx: 0, dy: 0 });
-  const { state: remoteState } = useCatSocket({ role: "display" }, (msg) => {
-    if (msg.type === "move") {
-      remoteDeltaRef.current.dx += msg.dx;
-      remoteDeltaRef.current.dy += msg.dy;
+  const { look, editLook, onState: onLookState } = useSharedLook();
+  const { state: remoteState, send } = useCatSocket(
+    { role: "display" },
+    (msg) => {
+      if (msg.type === "move") {
+        remoteDeltaRef.current.dx += msg.dx;
+        remoteDeltaRef.current.dy += msg.dy;
+      } else if (msg.type === "state") {
+        onLookState(msg);
+      }
     }
-  });
+  );
+  const updateLook = (patch) => {
+    editLook(patch);
+    send({ type: "look", patch });
+  };
   const remoteActive = !!remoteState?.active;
+
+  const { bgId, toySize, trailWidth, trailLength, showString } = look;
+  const bg = BACKGROUNDS.find((b) => b.id === bgId) ?? BACKGROUNDS[0];
+  const cursorObj = CURSORS.find((c) => c.id === look.cursorId) ?? CURSORS[0];
 
   // ── Prevent mobile scroll/bounce ──────────────────────────────────────────
   // Only block touchmove on the game background — NOT touchstart.
@@ -1057,100 +965,12 @@ export default function CatEntertainmentApp() {
           </Tabs>
 
           <Box sx={{ p: 1.75 }}>
-            {/* Scenes */}
-            {panelTab === "bg" && (
-              <Box
-                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
-              >
-                {BACKGROUNDS.map((b) => (
-                  <Button
-                    key={b.id}
-                    onClick={() => setBgId(b.id)}
-                    sx={{
-                      ...b.style,
-                      minHeight: 52,
-                      color: "white",
-                      fontSize: 12,
-                      borderRadius: 2,
-                      border:
-                        bgId === b.id
-                          ? "2px solid white"
-                          : "2px solid rgba(255,255,255,0.2)",
-                      boxShadow:
-                        bgId === b.id
-                          ? "0 0 10px rgba(255,255,255,0.3)"
-                          : "none",
-                      textTransform: "none",
-                      "&:hover": { opacity: 0.85, transform: "scale(1.04)" },
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    {b.label}
-                  </Button>
-                ))}
-              </Box>
-            )}
-
-            {/* Cursors */}
-            {panelTab === "cursor" && (
-              <Box
-                sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}
-              >
-                {CURSORS.map((c) => (
-                  <Button
-                    key={c.id}
-                    onClick={() => setCursorId(c.id)}
-                    sx={{
-                      display: "flex",
-                      flexDirection: "column",
-                      gap: 0.25,
-                      color: "white",
-                      fontSize: 11,
-                      borderRadius: 2,
-                      py: 1.25,
-                      border:
-                        cursorId === c.id
-                          ? "2px solid white"
-                          : "2px solid rgba(255,255,255,0.2)",
-                      background:
-                        cursorId === c.id
-                          ? "rgba(255,255,255,0.3)"
-                          : "rgba(255,255,255,0.08)",
-                      boxShadow:
-                        cursorId === c.id
-                          ? "0 0 10px rgba(255,255,255,0.3)"
-                          : "none",
-                      textTransform: "none",
-                      "&:hover": {
-                        background: "rgba(255,255,255,0.2)",
-                        transform: "scale(1.04)",
-                      },
-                      transition: "all 0.2s",
-                    }}
-                  >
-                    <span style={{ fontSize: 22 }}>{c.emoji}</span>
-                    <span style={{ opacity: 0.8 }}>
-                      {c.label.split(" ").slice(1).join(" ")}
-                    </span>
-                  </Button>
-                ))}
-              </Box>
-            )}
-
-            {/* Tune */}
-            {panelTab === "tune" && (
-              <Box sx={{ mt: 1 }}>
-                <Slider
-                  label="Toy Size"
-                  value={toySize}
-                  min={16}
-                  max={200}
-                  step={4}
-                  onChange={setToySize}
-                  fmt={(v) => `${v}px`}
-                />
-
-                {mode === "auto" && (
+            <LookControls
+              tab={panelTab}
+              look={look}
+              onChange={updateLook}
+              tuneExtra={
+                mode === "auto" && (
                   <>
                     <Divider
                       sx={{ borderColor: "rgba(255,255,255,0.1)", my: 2 }}
@@ -1173,58 +993,9 @@ export default function CatEntertainmentApp() {
                       }
                     />
                   </>
-                )}
-
-                <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", my: 2 }} />
-
-                <Box
-                  sx={{
-                    display: "flex",
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    mb: 3,
-                  }}
-                >
-                  <Typography
-                    variant="caption"
-                    sx={{ color: "rgba(255,255,255,0.8)" }}
-                  >
-                    Show String
-                  </Typography>
-                  <Checkbox
-                    sx={{ color: "#ffffff", p: 0 }}
-                    color="inherit"
-                    checked={showString}
-                    onChange={(e) => setShowString(e.target.checked)}
-                  />
-                </Box>
-
-                {showString && (
-                  <>
-                    <Slider
-                      label="String Thickness"
-                      value={trailWidth}
-                      min={4}
-                      max={64}
-                      step={2}
-                      onChange={setTrailWidth}
-                      fmt={(v) => `${v}pt`}
-                    />
-                    <Slider
-                      label="String Length"
-                      value={trailLength}
-                      min={10}
-                      max={120}
-                      step={5}
-                      onChange={setTrailLength}
-                      fmt={(v) =>
-                        v < 40 ? "Short" : v < 85 ? "Medium" : "Long"
-                      }
-                    />
-                  </>
-                )}
-              </Box>
-            )}
+                )
+              }
+            />
           </Box>
         </Paper>
       )}

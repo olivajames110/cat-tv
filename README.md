@@ -7,7 +7,7 @@ the toy.
 | Page     | Who opens it                     |
 | -------- | -------------------------------- |
 | `/`      | The TV. Shows the toy and the join QR code. |
-| `/play`  | Phones, via the QR code. Join the line, then drag to move the toy. |
+| `/play`  | Phones, via the QR code. Join the line, then drag to move the toy and pick the scene, toy and string settings. |
 | `/admin` | The admin. Sets the max session length, skips or removes players. |
 
 ## Running
@@ -34,7 +34,7 @@ via [render.yaml](render.yaml), not on Vercel. In Render: **New → Blueprint**,
 this repo, and enter an `ADMIN_PASSWORD`. Pushes to `main` redeploy it.
 
 On the free plan the disk is wiped on every deploy or restart, so the admin's
-session length falls back to the 60 s default until it is set again.
+session length and the TV's look fall back to their defaults (2:30, Garden, Mouse) until set again.
 
 ## Configuration
 

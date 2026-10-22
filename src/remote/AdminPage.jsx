@@ -11,7 +11,7 @@ import {
 import { CloseRounded } from "@mui/icons-material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
 
-const PRESETS = [30, 60, 120, 300];
+const PRESETS = [60, 120, 150, 300];
 
 export default function AdminPage() {
   const [password, setPassword] = useState(() => {

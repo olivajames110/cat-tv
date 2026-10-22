@@ -1,6 +1,8 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Box, Button, Tab, Tabs, TextField, Typography } from "@mui/material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
+import useSharedLook from "./useSharedLook.js";
+import LookControls from "../LookControls.jsx";
 
 function getClientId() {
   try {
@@ -56,10 +58,13 @@ export default function PlayerPage() {
   const [ended, setEnded] = useState(null);
   const [error, setError] = useState(null);
 
+  const { look, editLook, onState: onLookState } = useSharedLook();
   const { connected, state, send } = useCatSocket(
     { role: "player", clientId },
     (msg) => {
-      if (msg.type === "ended") {
+      if (msg.type === "state") {
+        onLookState(msg);
+      } else if (msg.type === "ended") {
         setEnded(msg.reason);
         setToken(null);
       } else if (msg.type === "yourTurn") {
@@ -70,6 +75,11 @@ export default function PlayerPage() {
       }
     }
   );
+
+  const updateLook = (patch) => {
+    editLook(patch);
+    send({ type: "look", patch });
+  };
 
   const you = state?.you;
   const status = you?.status ?? "idle";
@@ -94,7 +104,15 @@ export default function PlayerPage() {
   }
 
   if (status === "active") {
-    return <Trackpad you={you} send={send} connected={connected} />;
+    return (
+      <Trackpad
+        you={you}
+        send={send}
+        connected={connected}
+        look={look}
+        onLookChange={updateLook}
+      />
+    );
   }
 
   return (
@@ -185,12 +203,13 @@ export default function PlayerPage() {
 
 // ─── Trackpad ────────────────────────────────────────────────────────────────
 
-function Trackpad({ you, send, connected }) {
+function Trackpad({ you, send, connected, look, onLookChange }) {
   const padRef = useRef(null);
   const lastRef = useRef(null);
   const pendingRef = useRef({ dx: 0, dy: 0 });
   const secondsLeft = useCountdown(you.endsAt);
   const [touching, setTouching] = useState(false);
+  const [lookTab, setLookTab] = useState(null); // null = customize panel closed
 
   // Batch deltas and send at most once per animation frame.
   useEffect(() => {
@@ -274,14 +293,63 @@ function Trackpad({ you, send, connected }) {
         </Typography>
       </Box>
 
-      <Button
-        variant="outlined"
-        color="inherit"
-        onClick={() => send({ type: "leave" })}
-        sx={{ textTransform: "none" }}
-      >
-        End my turn
-      </Button>
+      {lookTab && (
+        <Box
+          sx={{
+            maxHeight: "45vh",
+            overflowY: "auto",
+            borderRadius: 3,
+            border: "1px solid rgba(255,255,255,0.15)",
+            background: "rgba(0,0,0,0.35)",
+          }}
+        >
+          <Tabs
+            value={lookTab}
+            onChange={(_, v) => setLookTab(v)}
+            textColor="inherit"
+            variant="fullWidth"
+            sx={{
+              borderBottom: "1px solid rgba(255,255,255,0.1)",
+              minHeight: 40,
+              "& .MuiTab-root": {
+                color: "rgba(255,255,255,0.6)",
+                fontSize: 12,
+                fontWeight: 600,
+                minHeight: 40,
+                py: 0,
+              },
+              "& .Mui-selected": { color: "white" },
+              "& .MuiTabs-indicator": { backgroundColor: "white" },
+            }}
+          >
+            <Tab label="⚙️ Tune" value="tune" />
+            <Tab label="🎯 Cursor" value="cursor" />
+            <Tab label="🖼 Scenes" value="bg" />
+          </Tabs>
+          <Box sx={{ p: 1.75 }}>
+            <LookControls tab={lookTab} look={look} onChange={onLookChange} />
+          </Box>
+        </Box>
+      )}
+
+      <Box sx={{ display: "flex", gap: 1 }}>
+        <Button
+          variant="outlined"
+          color="inherit"
+          onClick={() => setLookTab((t) => (t ? null : "cursor"))}
+          sx={{ flex: 1, textTransform: "none" }}
+        >
+          {lookTab ? "Done customizing" : "🎨 Customize"}
+        </Button>
+        <Button
+          variant="outlined"
+          color="inherit"
+          onClick={() => send({ type: "leave" })}
+          sx={{ flex: 1, textTransform: "none" }}
+        >
+          End my turn
+        </Button>
+      </Box>
     </Box>
   );
 }

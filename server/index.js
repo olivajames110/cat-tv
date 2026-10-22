@@ -11,6 +11,7 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
+import { DEFAULT_LOOK, sanitizeLookPatch } from "../src/shared/look.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, "../dist");
@@ -31,12 +32,16 @@ const MAX_NAME_LEN = 20;
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-const DEFAULT_SETTINGS = { maxSessionSeconds: 60 };
+const DEFAULT_SETTINGS = { maxSessionSeconds: 150, look: DEFAULT_LOOK };
 
 function loadSettings() {
   try {
     const saved = JSON.parse(fs.readFileSync(SETTINGS_FILE, "utf8"));
-    return { ...DEFAULT_SETTINGS, ...saved };
+    return {
+      ...DEFAULT_SETTINGS,
+      ...saved,
+      look: { ...DEFAULT_LOOK, ...sanitizeLookPatch(saved.look) },
+    };
   } catch {
     return { ...DEFAULT_SETTINGS };
   }
@@ -141,6 +146,7 @@ function publicState() {
     queueLength: queue.length - (active ? 1 : 0),
     upNext: queue.slice(active ? 1 : 0, active ? 4 : 3).map((e) => e.name),
     maxSessionSeconds: settings.maxSessionSeconds,
+    look: settings.look,
   };
 }
 
@@ -215,7 +221,34 @@ function safeEqual(a, b) {
 const finite = (n) => typeof n === "number" && Number.isFinite(n);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
+// The TV's own panel and the active phone may both change the look.
+function handleLook(ws, msg) {
+  const canEdit =
+    ws.role === "display" ||
+    (ws.role === "player" && active?.clientId === ws.clientId);
+  const patch = canEdit && sanitizeLookPatch(msg.patch);
+  if (!patch) return;
+  settings.look = { ...settings.look, ...patch };
+  scheduleSave();
+  broadcastState();
+}
+
+// Slider drags send many looks a second; write the file at most once a second.
+let saveTimer = null;
+function scheduleSave() {
+  if (saveTimer) return;
+  saveTimer = setTimeout(() => {
+    saveTimer = null;
+    saveSettings();
+  }, 1000);
+}
+
 function handleMessage(ws, msg) {
+  if (msg.type === "look") {
+    handleLook(ws, msg);
+    return;
+  }
+
   if (msg.type === "hello") {
     if (msg.role === "display") ws.role = "display";
     else if (msg.role === "player" && typeof msg.clientId === "string") {
