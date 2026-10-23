@@ -243,9 +243,23 @@ function scheduleSave() {
   }, 1000);
 }
 
+// "Play sound" taps from the active phone, rate-limited, relayed to the TV.
+const SOUND_MIN_GAP_MS = 250;
+function handleSound(ws) {
+  if (ws.role !== "player" || active?.clientId !== ws.clientId) return;
+  const now = Date.now();
+  if (now - (ws.lastSoundAt ?? 0) < SOUND_MIN_GAP_MS) return;
+  ws.lastSoundAt = now;
+  sendToDisplays({ type: "sound" });
+}
+
 function handleMessage(ws, msg) {
   if (msg.type === "look") {
     handleLook(ws, msg);
+    return;
+  }
+  if (msg.type === "sound") {
+    handleSound(ws);
     return;
   }
 

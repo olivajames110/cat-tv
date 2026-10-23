@@ -1,4 +1,4 @@
-// What the toy and scene look like. Shared by the TV, the phone controller and
+// What the toy, scene and sound are like. Shared by the TV, the phone controller and
 // the server (which validates every change), so keep this file free of JSX and
 // asset imports.
 
@@ -24,10 +24,24 @@ export const CURSORS = [
   { id: "feather", label: "🪶 Feather", emoji: "🪶", baseSize: 32 },
 ];
 
+// Sounds play on the TV (see src/sounds.js). "auto" plays one every few
+// seconds; "button" plays one each time the player taps Play Sound.
+export const SOUNDS = [
+  { id: "none", label: "🔇 Off" },
+  { id: "squeak", label: "🐭 Squeak" },
+  { id: "chirp", label: "🐦 Chirp" },
+  { id: "cricket", label: "🦗 Cricket" },
+  { id: "bell", label: "🔔 Bell" },
+  { id: "buzz", label: "🐝 Buzz" },
+  { id: "crinkle", label: "🛍️ Crinkle" },
+];
+export const SOUND_MODES = ["auto", "button"];
+
 export const LOOK_RANGES = {
   toySize: { min: 16, max: 200, step: 4 },
   trailWidth: { min: 4, max: 64, step: 2 },
   trailLength: { min: 10, max: 120, step: 5 },
+  volume: { min: 0, max: 100, step: 5 },
 };
 
 export const DEFAULT_LOOK = {
@@ -37,6 +51,9 @@ export const DEFAULT_LOOK = {
   trailWidth: 24,
   trailLength: 50,
   showString: true,
+  soundId: "none",
+  soundMode: "auto",
+  volume: 60,
 };
 
 // Keeps only known keys with valid values; returns null if nothing survives.
@@ -52,5 +69,7 @@ export function sanitizeLookPatch(patch) {
       out[key] = Math.max(min, Math.min(max, v));
   }
   if (typeof patch.showString === "boolean") out.showString = patch.showString;
+  if (SOUNDS.some((x) => x.id === patch.soundId)) out.soundId = patch.soundId;
+  if (SOUND_MODES.includes(patch.soundMode)) out.soundMode = patch.soundMode;
   return Object.keys(out).length ? out : null;
 }

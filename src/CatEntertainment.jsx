@@ -1,4 +1,10 @@
-import { useState, useEffect, useRef, useCallback } from "react";
+import {
+  useState,
+  useEffect,
+  useRef,
+  useCallback,
+  useSyncExternalStore,
+} from "react";
 import QRCode from "qrcode";
 import Logo from "./assets/logo.png";
 import useCatSocket, { fmtSeconds, useCountdown } from "./remote/useCatSocket.js";
@@ -6,6 +12,12 @@ import useSharedLook from "./remote/useSharedLook.js";
 import LookControls, { Slider } from "./LookControls.jsx";
 import { BACKGROUNDS, CURSORS } from "./shared/look.js";
 import { sceneStyle } from "./scenes.js";
+import {
+  audioRunning,
+  playSound,
+  subscribeAudioState,
+  unlockAudio,
+} from "./sounds.js";
 import {
   Box,
   Typography,
@@ -636,6 +648,8 @@ export default function CatEntertainmentApp() {
         remoteDeltaRef.current.dy += msg.dy;
       } else if (msg.type === "state") {
         onLookState(msg);
+      } else if (msg.type === "sound") {
+        playSound(look.soundId, look.volume);
       }
     }
   );
@@ -648,6 +662,43 @@ export default function CatEntertainmentApp() {
   const { bgId, toySize, trailWidth, trailLength, showString } = look;
   const bg = BACKGROUNDS.find((b) => b.id === bgId) ?? BACKGROUNDS[0];
   const cursorObj = CURSORS.find((c) => c.id === look.cursorId) ?? CURSORS[0];
+
+  // ── Sound ─────────────────────────────────────────────────────────────────
+  // Browsers block audio until the page is clicked once; any click unlocks it.
+  const { soundId, soundMode, volume } = look;
+  const audioOn = useSyncExternalStore(subscribeAudioState, audioRunning);
+  useEffect(() => {
+    window.addEventListener("pointerdown", unlockAudio);
+    window.addEventListener("keydown", unlockAudio);
+    return () => {
+      window.removeEventListener("pointerdown", unlockAudio);
+      window.removeEventListener("keydown", unlockAudio);
+    };
+  }, []);
+
+  const volumeRef = useRef(volume);
+  useEffect(() => {
+    volumeRef.current = volume;
+  }, [volume]);
+
+  // Play the newly picked sound once so whoever picked it hears it.
+  useEffect(() => {
+    playSound(soundId, volumeRef.current);
+  }, [soundId]);
+
+  // Auto play: one burst every few seconds.
+  useEffect(() => {
+    if (soundMode !== "auto" || soundId === "none") return;
+    let timer;
+    const schedule = () => {
+      timer = setTimeout(() => {
+        playSound(soundId, volumeRef.current);
+        schedule();
+      }, 2500 + Math.random() * 4500);
+    };
+    schedule();
+    return () => clearTimeout(timer);
+  }, [soundId, soundMode]);
 
   // ── Prevent mobile scroll/bounce ──────────────────────────────────────────
   // Only block touchmove on the game background — NOT touchstart.
@@ -887,11 +938,13 @@ export default function CatEntertainmentApp() {
             <Tab label="⚙️ Tune" value="tune" />
             <Tab label="🎯 Cursor" value="cursor" />
             <Tab label="🖼 Scenes" value="bg" />
+            <Tab label="🔊 Sound" value="sound" />
           </Tabs>
 
           <Box sx={{ p: 1.75 }}>
             <LookControls
               tab={panelTab}
+              onPlaySound={() => playSound(soundId, volume)}
               look={look}
               onChange={updateLook}
               tuneExtra={
@@ -980,6 +1033,27 @@ export default function CatEntertainmentApp() {
             <SmartToyOutlined sx={{ fontSize: 18 }} />
             Auto Move on
           </Box>
+        )}
+
+        {soundId !== "none" && !audioOn && (
+          <Button
+            onClick={unlockAudio}
+            sx={{
+              px: 2,
+              py: 1.25,
+              background: "rgba(0,0,0,0.45)",
+              border: "1px solid rgba(255,255,255,0.3)",
+              color: "white",
+              borderRadius: 5,
+              backdropFilter: "blur(10px)",
+              fontSize: 14,
+              textTransform: "none",
+              whiteSpace: "nowrap",
+              "&:hover": { background: "rgba(0,0,0,0.65)" },
+            }}
+          >
+            🔇 Click to enable sound
+          </Button>
         )}
       </Box>
     </div>

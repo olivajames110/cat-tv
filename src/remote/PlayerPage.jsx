@@ -325,11 +325,23 @@ function Trackpad({ you, send, connected, look, onLookChange }) {
             <Tab label="⚙️ Tune" value="tune" />
             <Tab label="🎯 Cursor" value="cursor" />
             <Tab label="🖼 Scenes" value="bg" />
+            <Tab label="🔊 Sound" value="sound" />
           </Tabs>
           <Box sx={{ p: 1.75 }}>
             <LookControls tab={lookTab} look={look} onChange={onLookChange} />
           </Box>
         </Box>
+      )}
+
+      {look.soundId !== "none" && look.soundMode === "button" && (
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => send({ type: "sound" })}
+          sx={{ py: 1.5, fontSize: 18, textTransform: "none" }}
+        >
+          🔊 Play sound
+        </Button>
       )}
 
       <Box sx={{ display: "flex", gap: 1 }}>

@@ -6,7 +6,7 @@ import {
   Checkbox,
   Divider,
 } from "@mui/material";
-import { BACKGROUNDS, CURSORS, LOOK_RANGES } from "./shared/look.js";
+import { BACKGROUNDS, CURSORS, LOOK_RANGES, SOUNDS } from "./shared/look.js";
 import { sceneThumbStyle } from "./scenes.js";
 
 // ─── MUI Slider wrapper ───────────────────────────────────────────────────────
@@ -41,9 +41,28 @@ export function Slider({ label, value, min, max, step, onChange, fmt }) {
 
 // ─── Look controls (Tune / Cursor / Scenes tab bodies) ────────────────────────
 
+const choiceSx = (selected) => ({
+  color: "white",
+  fontSize: 12,
+  borderRadius: 2,
+  py: 1,
+  border: selected ? "2px solid white" : "2px solid rgba(255,255,255,0.2)",
+  background: selected ? "rgba(255,255,255,0.3)" : "rgba(255,255,255,0.08)",
+  boxShadow: selected ? "0 0 10px rgba(255,255,255,0.3)" : "none",
+  textTransform: "none",
+  "&:hover": { background: "rgba(255,255,255,0.2)" },
+});
+
 // Renders the body of one control-panel tab. Used by the TV's panel and the
-// phone's customize panel. `tuneExtra` is slotted in after Toy Size.
-export default function LookControls({ tab, look, onChange, tuneExtra }) {
+// phone's customize panel. `tuneExtra` is slotted in after Toy Size, and
+// `onPlaySound` (if given) adds a Play Sound button in "On button press" mode.
+export default function LookControls({
+  tab,
+  look,
+  onChange,
+  tuneExtra,
+  onPlaySound,
+}) {
   if (tab === "bg") {
     return (
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
@@ -118,6 +137,69 @@ export default function LookControls({ tab, look, onChange, tuneExtra }) {
             </span>
           </Button>
         ))}
+      </Box>
+    );
+  }
+
+  if (tab === "sound") {
+    return (
+      <Box>
+        <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1 }}>
+          {SOUNDS.map((x) => (
+            <Button
+              key={x.id}
+              onClick={() => onChange({ soundId: x.id })}
+              sx={choiceSx(look.soundId === x.id)}
+            >
+              {x.label}
+            </Button>
+          ))}
+        </Box>
+
+        {look.soundId !== "none" && (
+          <>
+            <Divider sx={{ borderColor: "rgba(255,255,255,0.1)", my: 2 }} />
+            <Typography
+              variant="caption"
+              component="div"
+              sx={{ color: "rgba(255,255,255,0.8)", mb: 1 }}
+            >
+              When to play
+            </Typography>
+            <Box
+              sx={{ display: "grid", gridTemplateColumns: "1fr 1fr", gap: 1, mb: 2 }}
+            >
+              <Button
+                onClick={() => onChange({ soundMode: "auto" })}
+                sx={choiceSx(look.soundMode === "auto")}
+              >
+                🔁 Auto play
+              </Button>
+              <Button
+                onClick={() => onChange({ soundMode: "button" })}
+                sx={choiceSx(look.soundMode === "button")}
+              >
+                👆 On button press
+              </Button>
+            </Box>
+            <Slider
+              label="Volume"
+              value={look.volume}
+              {...LOOK_RANGES.volume}
+              onChange={(v) => onChange({ volume: v })}
+              fmt={(v) => `${v}%`}
+            />
+            {onPlaySound && look.soundMode === "button" && (
+              <Button
+                fullWidth
+                onClick={onPlaySound}
+                sx={choiceSx(false)}
+              >
+                🔊 Play sound
+              </Button>
+            )}
+          </>
+        )}
       </Box>
     );
   }
