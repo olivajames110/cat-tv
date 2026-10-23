@@ -32,7 +32,11 @@ const MAX_NAME_LEN = 20;
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
-const DEFAULT_SETTINGS = { maxSessionSeconds: 150, look: DEFAULT_LOOK };
+const DEFAULT_SETTINGS = {
+  maxSessionSeconds: 150,
+  qrSizePercent: 100, // of the TV's full-size QR panel; admin can go down to 25
+  look: DEFAULT_LOOK,
+};
 
 function loadSettings() {
   try {
@@ -146,6 +150,7 @@ function publicState() {
     queueLength: queue.length - (active ? 1 : 0),
     upNext: queue.slice(active ? 1 : 0, active ? 4 : 3).map((e) => e.name),
     maxSessionSeconds: settings.maxSessionSeconds,
+    qrSizePercent: settings.qrSizePercent,
     look: settings.look,
   };
 }
@@ -289,8 +294,9 @@ function handleMessage(ws, msg) {
         }
         playerCount += 1;
         const name =
-          String(msg.name ?? "").trim().slice(0, MAX_NAME_LEN) ||
-          `Player ${playerCount}`;
+          String(msg.name ?? "")
+            .trim()
+            .slice(0, MAX_NAME_LEN) || `Player ${playerCount}`;
         queue.push({ clientId: ws.clientId, name, disconnectedAt: null });
         advance();
         broadcastState();
@@ -325,9 +331,16 @@ function handleMessage(ws, msg) {
             10,
             3600
           );
-          saveSettings();
-          broadcastState();
         }
+        if (finite(msg.qrSizePercent)) {
+          settings.qrSizePercent = clamp(
+            Math.round(msg.qrSizePercent),
+            25,
+            100
+          );
+        }
+        saveSettings();
+        broadcastState();
         return;
       case "skip":
         if (active) removeFromQueue(active.clientId, "skipped");

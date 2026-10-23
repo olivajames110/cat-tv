@@ -7,7 +7,10 @@ import {
 } from "react";
 import QRCode from "qrcode";
 import Logo from "./assets/logo.png";
-import useCatSocket, { fmtSeconds, useCountdown } from "./remote/useCatSocket.js";
+import useCatSocket, {
+  fmtSeconds,
+  useCountdown,
+} from "./remote/useCatSocket.js";
 import useSharedLook from "./remote/useSharedLook.js";
 import LookControls, { Slider } from "./LookControls.jsx";
 import { BACKGROUNDS, CURSORS } from "./shared/look.js";
@@ -538,6 +541,10 @@ function JoinPanel({ state }) {
 
   if (!joinUrl || !qr) return null;
 
+  // The admin can shrink the panel to 25%; below 60% only the code is shown.
+  const scale = (state.qrSizePercent ?? 100) / 100;
+  const compact = scale < 0.6;
+
   return (
     <Paper
       elevation={8}
@@ -545,8 +552,9 @@ function JoinPanel({ state }) {
         position: "fixed",
         left: 20,
         bottom: 20,
-        p: 1.5,
-        width: 200,
+        p: compact ? 0.5 : 1.5,
+        width: 200 * scale,
+        boxSizing: "border-box",
         background: "rgba(0,0,0,0.58)",
         backdropFilter: "blur(20px)",
         borderRadius: 3,
@@ -559,25 +567,33 @@ function JoinPanel({ state }) {
       <img
         src={qr}
         alt="Scan to play"
-        style={{ width: "100%", borderRadius: 8, display: "block" }}
+        style={{
+          width: "100%",
+          borderRadius: compact ? 4 : 8,
+          display: "block",
+        }}
       />
-      <Typography sx={{ fontWeight: 700, mt: 1, color: "white" }}>
-        📱 Scan to play!
-      </Typography>
-      {state.active ? (
-        <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
-          {state.active.name} is playing · {fmtSeconds(secondsLeft)}
-        </Typography>
-      ) : (
-        <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
-          Nobody's playing — you're next!
-        </Typography>
-      )}
-      {state.queueLength > 0 && (
-        <Typography sx={{ fontSize: 12, color: "white", opacity: 0.6 }}>
-          {state.queueLength} in line
-          {state.upNext.length > 0 && `: ${state.upNext.join(", ")}`}
-        </Typography>
+      {!compact && (
+        <>
+          <Typography sx={{ fontWeight: 700, mt: 1, color: "white" }}>
+            📱 Scan to play!
+          </Typography>
+          {state.active ? (
+            <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
+              {state.active.name} is playing · {fmtSeconds(secondsLeft)}
+            </Typography>
+          ) : (
+            <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
+              Nobody's playing — you're next!
+            </Typography>
+          )}
+          {state.queueLength > 0 && (
+            <Typography sx={{ fontSize: 12, color: "white", opacity: 0.6 }}>
+              {state.queueLength} in line
+              {state.upNext.length > 0 && `: ${state.upNext.join(", ")}`}
+            </Typography>
+          )}
+        </>
       )}
     </Paper>
   );
@@ -691,10 +707,13 @@ export default function CatEntertainmentApp() {
     if (soundMode !== "auto" || soundId === "none") return;
     let timer;
     const schedule = () => {
-      timer = setTimeout(() => {
-        playSound(soundId, volumeRef.current);
-        schedule();
-      }, 2500 + Math.random() * 4500);
+      timer = setTimeout(
+        () => {
+          playSound(soundId, volumeRef.current);
+          schedule();
+        },
+        2500 + Math.random() * 4500
+      );
     };
     schedule();
     return () => clearTimeout(timer);
@@ -964,10 +983,10 @@ export default function CatEntertainmentApp() {
                         v < 25
                           ? "🐢 Lazy"
                           : v < 55
-                          ? "🐱 Normal"
-                          : v < 80
-                          ? "🐇 Zippy"
-                          : "⚡ Frenzy"
+                            ? "🐱 Normal"
+                            : v < 80
+                              ? "🐇 Zippy"
+                              : "⚡ Frenzy"
                       }
                     />
                   </>

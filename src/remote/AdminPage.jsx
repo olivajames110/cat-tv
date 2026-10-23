@@ -5,6 +5,7 @@ import {
   Divider,
   IconButton,
   Paper,
+  Slider,
   TextField,
   Typography,
 } from "@mui/material";
@@ -12,6 +13,7 @@ import { CloseRounded } from "@mui/icons-material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
 
 const PRESETS = [60, 120, 150, 300];
+const QR_PRESETS = [25, 50, 75, 100];
 
 export default function AdminPage() {
   const [password, setPassword] = useState(() => {
@@ -74,6 +76,7 @@ export default function AdminPage() {
 function AdminConsole({ password, onSignOut }) {
   const [authFailed, setAuthFailed] = useState(false);
   const [draft, setDraft] = useState(null);
+  const [qrDraft, setQrDraft] = useState(null); // while dragging the slider
 
   const { connected, state, send } = useCatSocket(
     { role: "admin", password },
@@ -175,6 +178,42 @@ function AdminConsole({ password, onSignOut }) {
         >
           Save
         </Button>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Typography sx={{ fontWeight: 700, mb: 1 }}>QR code size</Typography>
+      <Typography variant="body2" sx={{ opacity: 0.7, mb: 1.5 }}>
+        Size of the scan-to-play code on the TV. Below 60% only the code is
+        shown, without the "now playing" text.
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap", mb: 1 }}>
+        {QR_PRESETS.map((pct) => (
+          <Button
+            key={pct}
+            variant={state.qrSizePercent === pct ? "contained" : "outlined"}
+            onClick={() => send({ type: "settings", qrSizePercent: pct })}
+          >
+            {pct}%
+          </Button>
+        ))}
+      </Box>
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2, px: 1 }}>
+        <Slider
+          min={25}
+          max={100}
+          step={5}
+          value={qrDraft ?? state.qrSizePercent}
+          onChange={(_, v) => setQrDraft(v)}
+          onChangeCommitted={(_, v) => {
+            send({ type: "settings", qrSizePercent: v });
+            setQrDraft(null);
+          }}
+          aria-label="QR code size"
+        />
+        <Typography sx={{ width: 48, textAlign: "right" }}>
+          {qrDraft ?? state.qrSizePercent}%
+        </Typography>
       </Box>
 
       <Divider sx={{ my: 2 }} />
