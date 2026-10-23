@@ -52,7 +52,7 @@ export const DEFAULT_LOOK = {
   trailLength: 50,
   showString: true,
   soundId: "none",
-  soundMode: "auto",
+  soundMode: "button",
   volume: 60,
 };
 

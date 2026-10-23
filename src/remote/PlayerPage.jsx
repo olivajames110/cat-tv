@@ -333,16 +333,43 @@ function Trackpad({ you, send, connected, look, onLookChange }) {
         </Box>
       )}
 
-      {look.soundId !== "none" && look.soundMode === "button" && (
-        <Button
-          variant="contained"
-          size="large"
-          onClick={() => send({ type: "sound" })}
-          sx={{ py: 1.5, fontSize: 18, textTransform: "none" }}
-        >
-          🔊 Play sound
-        </Button>
-      )}
+      {!lookTab &&
+        (look.soundId !== "none" && look.soundMode === "button" ? (
+          <Button
+            variant="contained"
+            size="large"
+            onClick={() => send({ type: "sound" })}
+            sx={{ py: 1.5, fontSize: 18, textTransform: "none" }}
+          >
+            🔊 Play sound
+          </Button>
+        ) : (
+          // Looks disabled, but tapping it opens the Sound tab to turn it on.
+          <Button
+            variant="outlined"
+            size="large"
+            onClick={() => setLookTab("sound")}
+            sx={{
+              py: 1,
+              textTransform: "none",
+              color: "rgba(255,255,255,0.5)",
+              borderColor: "rgba(255,255,255,0.2)",
+              borderStyle: "dashed",
+              display: "flex",
+              flexDirection: "column",
+              lineHeight: 1.3,
+            }}
+          >
+            <span style={{ fontSize: 18 }}>
+              {look.soundId === "none" ? "🔇 Sound is off" : "🔁 Sound is on auto play"}
+            </span>
+            <span style={{ fontSize: 13, opacity: 0.8 }}>
+              {look.soundId === "none"
+                ? "Tap to pick a sound"
+                : "Tap to switch to a Play sound button"}
+            </span>
+          </Button>
+        ))}
 
       <Box sx={{ display: "flex", gap: 1 }}>
         <Button
