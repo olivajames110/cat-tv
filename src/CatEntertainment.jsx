@@ -331,23 +331,38 @@ function ToyView({
 
 // ─── Manual Toy ───────────────────────────────────────────────────────────────
 
+// While `frozen` (the control panel is open), or while the pointer is over any
+// on-screen UI (.cat-panel / .cat-ui), the toy stays put and the mouse moves
+// on its own.
 function ManualToy({
   cursorObj,
   toySize,
   trailWidth,
   trailLength,
   showString,
+  frozen,
 }) {
   const [pos, setPos] = useState({ x: -400, y: -400 });
+  const frozenRef = useRef(frozen);
+  useEffect(() => {
+    frozenRef.current = frozen;
+  }, [frozen]);
 
   useEffect(() => {
+    const ignore = (e) =>
+      frozenRef.current || e.target?.closest?.(".cat-panel, .cat-ui");
     const onMove = (e) => {
+      if (ignore(e)) return;
       const x = e.clientX ?? e.touches?.[0]?.clientX;
       const y = e.clientY ?? e.touches?.[0]?.clientY;
       if (x !== undefined) setPos({ x, y });
     };
-    const onLeave = () => setPos({ x: -400, y: -400 });
-    const onEnter = (e) => setPos({ x: e.clientX, y: e.clientY });
+    const onLeave = () => {
+      if (!frozenRef.current) setPos({ x: -400, y: -400 });
+    };
+    const onEnter = (e) => {
+      if (!ignore(e)) setPos({ x: e.clientX, y: e.clientY });
+    };
 
     window.addEventListener("mousemove", onMove);
     window.addEventListener("touchmove", onMove, { passive: true });
@@ -548,6 +563,7 @@ function JoinPanel({ state }) {
   return (
     <Paper
       elevation={8}
+      className="cat-ui"
       sx={{
         position: "fixed",
         left: 20,
@@ -766,6 +782,10 @@ export default function CatEntertainmentApp() {
         .cat-panel, .cat-panel * {
           touch-action: auto;
         }
+        /* The page hides the mouse in Manual mode; show it again over UI */
+        .cat-ui {
+          cursor: default;
+        }
       `}</style>
 
       <BgDecorations bgId={bgId} />
@@ -783,6 +803,7 @@ export default function CatEntertainmentApp() {
       ) : mode === "manual" ? (
         <ManualToy
           key="m"
+          frozen={showPanel}
           cursorObj={cursorObj}
           toySize={toySize}
           trailWidth={trailWidth}
@@ -999,6 +1020,7 @@ export default function CatEntertainmentApp() {
 
       {/* Toggle button (+ Auto Move indicator while the panel is hidden) */}
       <Box
+        className="cat-ui"
         sx={{
           position: "fixed",
           bottom: 20,
