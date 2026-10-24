@@ -30,7 +30,7 @@ const ACTIVE_GRACE_MS = 10_000; // active player may drop this long before losin
 const QUEUED_GRACE_MS = 30_000; // queued player may drop this long before losing their spot
 const MAX_NAME_LEN = 20;
 const EXTEND_MS = 60_000; // "+1 min" on the phone, allowed while nobody is waiting
-const MAX_REMAINING_MS = 60 * 60_000; // extensions never push a turn past an hour left
+const MAX_EXTEND_MS = 3 * 60_000; // most extra time one turn can get
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
@@ -78,7 +78,7 @@ const isValidToken = (t) => t && (t === joinToken || t === prevJoinToken);
 // queue[0] is the active player once `active` is set.
 // Entry: { clientId, name, disconnectedAt }
 let queue = [];
-let active = null; // { clientId, endsAt }
+let active = null; // { clientId, endsAt, extendedMs }
 let playerCount = 0;
 
 const sockets = new Set(); // every connected ws, tagged with ws.role / ws.clientId
@@ -101,6 +101,7 @@ function advance() {
   active = {
     clientId: next.clientId,
     endsAt: Date.now() + settings.maxSessionSeconds * 1000,
+    extendedMs: 0,
   };
   sendToPlayer(next.clientId, { type: "yourTurn" });
 }
@@ -177,6 +178,7 @@ function stateFor(ws) {
               name: queue[idx].name,
               position: isActive ? 0 : idx + (active ? 0 : 1),
               remainingMs: isActive ? active.endsAt - Date.now() : null,
+              canExtend: isActive && active.extendedMs < MAX_EXTEND_MS,
             },
     };
   }
@@ -308,10 +310,9 @@ function handleMessage(ws, msg) {
         // Only while nobody is waiting, so the admin's limit still holds
         // whenever there's a line.
         if (active?.clientId !== ws.clientId || queue.length > 1) return;
-        active.endsAt = Math.min(
-          active.endsAt + EXTEND_MS,
-          Date.now() + MAX_REMAINING_MS
-        );
+        if (active.extendedMs >= MAX_EXTEND_MS) return;
+        active.endsAt += EXTEND_MS;
+        active.extendedMs += EXTEND_MS;
         broadcastState();
         return;
       case "leave":

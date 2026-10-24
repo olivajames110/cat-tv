@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, TextField, Typography } from "@mui/material";
+import { Box, Button, IconButton, TextField, Typography } from "@mui/material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
 import useSharedLook from "./useSharedLook.js";
 import LookControls from "../LookControls.jsx";
@@ -303,7 +303,7 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
           >
             {fmtSeconds(secondsLeft)}
           </Typography>
-          {queueLength === 0 && (
+          {queueLength === 0 && you.canExtend && (
             <Button
               size="small"
               variant="outlined"
@@ -360,15 +360,35 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
       {lookTab && (
         <Box
           sx={{
-            maxHeight: "38vh",
-            overflowY: "auto",
+            position: "relative",
             borderRadius: 3,
             border: "1px solid rgba(255,255,255,0.15)",
             background: "rgba(0,0,0,0.35)",
-            p: 1.75,
           }}
         >
-          <LookControls tab={lookTab} look={look} onChange={onLookChange} />
+          {/* Outside the scrolling area so it stays put. */}
+          <IconButton
+            aria-label="Close"
+            size="small"
+            onClick={() => setLookTab(null)}
+            sx={{
+              position: "absolute",
+              top: 4,
+              right: 4,
+              zIndex: 1,
+              width: 28,
+              height: 28,
+              fontSize: 14,
+              color: "white",
+              background: "rgba(255,255,255,0.12)",
+              "&:hover": { background: "rgba(255,255,255,0.22)" },
+            }}
+          >
+            ✕
+          </IconButton>
+          <Box sx={{ maxHeight: "38vh", overflowY: "auto", p: 1.75, pt: 4.5 }}>
+            <LookControls tab={lookTab} look={look} onChange={onLookChange} />
+          </Box>
         </Box>
       )}
 
