@@ -7,7 +7,7 @@ the toy.
 | Page     | Who opens it                     |
 | -------- | -------------------------------- |
 | `/`      | The TV. Shows the toy and the join QR code. |
-| `/play`  | Phones, via the QR code. Join the line, then drag to move the toy and pick the scene, toy and string settings. |
+| `/play`  | Phones, via the QR code. Join the line, then drag to move the toy, pick the scene, toy, tuning and sound, and add a minute when nobody is waiting. |
 | `/admin` | The admin. Sets the max session length, skips or removes players. |
 
 ## Running

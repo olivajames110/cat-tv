@@ -29,6 +29,8 @@ const TOKEN_ROTATE_MS = 60_000;
 const ACTIVE_GRACE_MS = 10_000; // active player may drop this long before losing the turn
 const QUEUED_GRACE_MS = 30_000; // queued player may drop this long before losing their spot
 const MAX_NAME_LEN = 20;
+const EXTEND_MS = 60_000; // "+1 min" on the phone, allowed while nobody is waiting
+const MAX_REMAINING_MS = 60 * 60_000; // extensions never push a turn past an hour left
 
 // ─── Settings ────────────────────────────────────────────────────────────────
 
@@ -302,6 +304,16 @@ function handleMessage(ws, msg) {
         broadcastState();
         return;
       }
+      case "extend":
+        // Only while nobody is waiting, so the admin's limit still holds
+        // whenever there's a line.
+        if (active?.clientId !== ws.clientId || queue.length > 1) return;
+        active.endsAt = Math.min(
+          active.endsAt + EXTEND_MS,
+          Date.now() + MAX_REMAINING_MS
+        );
+        broadcastState();
+        return;
       case "leave":
         removeFromQueue(ws.clientId, "left");
         advance();

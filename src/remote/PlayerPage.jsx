@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import { Box, Button, Tab, Tabs, TextField, Typography } from "@mui/material";
+import { Box, Button, TextField, Typography } from "@mui/material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
 import useSharedLook from "./useSharedLook.js";
 import LookControls from "../LookControls.jsx";
@@ -111,6 +111,7 @@ export default function PlayerPage() {
         connected={connected}
         look={look}
         onLookChange={updateLook}
+        queueLength={state?.queueLength ?? 0}
       />
     );
   }
@@ -203,13 +204,20 @@ export default function PlayerPage() {
 
 // ─── Trackpad ────────────────────────────────────────────────────────────────
 
-function Trackpad({ you, send, connected, look, onLookChange }) {
+const LOOK_TABS = [
+  { id: "tune", icon: "⚙️", label: "Tune" },
+  { id: "cursor", icon: "🎯", label: "Cursor" },
+  { id: "bg", icon: "🖼", label: "Scenes" },
+  { id: "sound", icon: "🔊", label: "Sound" },
+];
+
+function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
   const padRef = useRef(null);
   const lastRef = useRef(null);
   const pendingRef = useRef({ dx: 0, dy: 0 });
   const secondsLeft = useCountdown(you.endsAt);
   const [touching, setTouching] = useState(false);
-  const [lookTab, setLookTab] = useState(null); // null = customize panel closed
+  const [lookTab, setLookTab] = useState(null); // null = settings panel closed
 
   // Batch deltas and send at most once per animation frame.
   useEffect(() => {
@@ -245,26 +253,51 @@ function Trackpad({ you, send, connected, look, onLookChange }) {
     setTouching(false);
   };
 
+  const soundReady = look.soundId !== "none" && look.soundMode === "button";
+  const toggleTab = (tab) => setLookTab((t) => (t === tab ? null : tab));
+
   return (
-    <Box sx={{ ...shell, p: 2, gap: 2 }}>
+    <Box sx={{ ...shell, p: 2, gap: 1.5 }}>
       <Box
         sx={{
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
+          gap: 1,
         }}
       >
-        <Typography sx={{ fontWeight: 700 }}>Your turn, {you.name}!</Typography>
-        <Typography
-          sx={{
-            fontWeight: 700,
-            fontSize: 22,
-            fontVariantNumeric: "tabular-nums",
-            color: secondsLeft <= 10 ? "#fca5a5" : "white",
-          }}
+        <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+          <Typography
+            sx={{
+              fontWeight: 700,
+              fontSize: 22,
+              fontVariantNumeric: "tabular-nums",
+              color: secondsLeft <= 10 ? "#fca5a5" : "white",
+            }}
+          >
+            {fmtSeconds(secondsLeft)}
+          </Typography>
+          {queueLength === 0 && (
+            <Button
+              size="small"
+              variant="outlined"
+              color="inherit"
+              onClick={() => send({ type: "extend" })}
+              sx={{ textTransform: "none", minWidth: 0, px: 1.25 }}
+            >
+              +1 min
+            </Button>
+          )}
+        </Box>
+        <Button
+          size="small"
+          variant="outlined"
+          color="inherit"
+          onClick={() => send({ type: "leave" })}
+          sx={{ textTransform: "none" }}
         >
-          {fmtSeconds(secondsLeft)}
-        </Typography>
+          End my turn
+        </Button>
       </Box>
 
       <Box
@@ -275,6 +308,7 @@ function Trackpad({ you, send, connected, look, onLookChange }) {
         onPointerCancel={onPointerUp}
         sx={{
           flex: 1,
+          minHeight: 120,
           borderRadius: 4,
           border: "2px solid rgba(255,255,255,0.25)",
           background: touching
@@ -283,111 +317,103 @@ function Trackpad({ you, send, connected, look, onLookChange }) {
           touchAction: "none",
           userSelect: "none",
           display: "flex",
+          flexDirection: "column",
           alignItems: "center",
           justifyContent: "center",
+          textAlign: "center",
           transition: "background 0.15s",
         }}
       >
         <Typography sx={{ opacity: 0.45, pointerEvents: "none" }}>
-          {connected ? "Drag here to move the toy 🐭" : "Reconnecting…"}
+          {connected
+            ? `Your turn, ${you.name}! Drag here to move the toy 🐭`
+            : "Reconnecting…"}
         </Typography>
       </Box>
 
       {lookTab && (
         <Box
           sx={{
-            maxHeight: "45vh",
+            maxHeight: "38vh",
             overflowY: "auto",
             borderRadius: 3,
             border: "1px solid rgba(255,255,255,0.15)",
             background: "rgba(0,0,0,0.35)",
+            p: 1.75,
           }}
         >
-          <Tabs
-            value={lookTab}
-            onChange={(_, v) => setLookTab(v)}
-            textColor="inherit"
-            variant="fullWidth"
-            sx={{
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-              minHeight: 40,
-              "& .MuiTab-root": {
-                color: "rgba(255,255,255,0.6)",
-                fontSize: 12,
-                fontWeight: 600,
-                minHeight: 40,
-                py: 0,
-              },
-              "& .Mui-selected": { color: "white" },
-              "& .MuiTabs-indicator": { backgroundColor: "white" },
-            }}
-          >
-            <Tab label="⚙️ Tune" value="tune" />
-            <Tab label="🎯 Cursor" value="cursor" />
-            <Tab label="🖼 Scenes" value="bg" />
-            <Tab label="🔊 Sound" value="sound" />
-          </Tabs>
-          <Box sx={{ p: 1.75 }}>
-            <LookControls tab={lookTab} look={look} onChange={onLookChange} />
-          </Box>
+          <LookControls tab={lookTab} look={look} onChange={onLookChange} />
         </Box>
       )}
 
-      {!lookTab &&
-        (look.soundId !== "none" && look.soundMode === "button" ? (
-          <Button
-            variant="contained"
-            size="large"
-            onClick={() => send({ type: "sound" })}
-            sx={{ py: 1.5, fontSize: 18, textTransform: "none" }}
-          >
-            🔊 Play sound
-          </Button>
-        ) : (
-          // Looks disabled, but tapping it opens the Sound tab to turn it on.
-          <Button
-            variant="outlined"
-            size="large"
-            onClick={() => setLookTab("sound")}
-            sx={{
-              py: 1,
-              textTransform: "none",
-              color: "rgba(255,255,255,0.5)",
-              borderColor: "rgba(255,255,255,0.2)",
-              borderStyle: "dashed",
-              display: "flex",
-              flexDirection: "column",
-              lineHeight: 1.3,
-            }}
-          >
-            <span style={{ fontSize: 18 }}>
-              {look.soundId === "none" ? "🔇 Sound is off" : "🔁 Sound is on auto play"}
-            </span>
-            <span style={{ fontSize: 13, opacity: 0.8 }}>
-              {look.soundId === "none"
-                ? "Tap to pick a sound"
-                : "Tap to switch to a Play sound button"}
-            </span>
-          </Button>
-        ))}
+      {soundReady ? (
+        <Button
+          variant="contained"
+          size="large"
+          onClick={() => send({ type: "sound" })}
+          sx={{ py: 1.5, fontSize: 18, textTransform: "none" }}
+        >
+          🔊 Play sound
+        </Button>
+      ) : (
+        // Looks disabled, but tapping it opens the Sound settings to turn it on.
+        <Button
+          variant="outlined"
+          size="large"
+          onClick={() => setLookTab("sound")}
+          sx={{
+            py: 1,
+            textTransform: "none",
+            color: "rgba(255,255,255,0.5)",
+            borderColor: "rgba(255,255,255,0.2)",
+            borderStyle: "dashed",
+            display: "flex",
+            flexDirection: "column",
+            lineHeight: 1.3,
+          }}
+        >
+          <span style={{ fontSize: 18 }}>
+            {look.soundId === "none" ? "🔇 Sound is off" : "🔁 Sound is on auto play"}
+          </span>
+          <span style={{ fontSize: 13, opacity: 0.8 }}>
+            {look.soundId === "none"
+              ? "Tap to pick a sound"
+              : "Tap to switch to a Play sound button"}
+          </span>
+        </Button>
+      )}
 
-      <Box sx={{ display: "flex", gap: 1 }}>
-        <Button
-          variant="outlined"
-          color="inherit"
-          onClick={() => setLookTab((t) => (t ? null : "cursor"))}
-          sx={{ flex: 1, textTransform: "none" }}
-        >
-          {lookTab ? "Done customizing" : "🎨 Customize"}
-        </Button>
-        <Button
-          variant="outlined"
-          color="inherit"
-          onClick={() => send({ type: "leave" })}
-          sx={{ flex: 1, textTransform: "none" }}
-        >
-          End my turn
-        </Button>
+      <Box
+        sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1 }}
+      >
+        {LOOK_TABS.map(({ id, icon, label }) => {
+          const selected = lookTab === id;
+          return (
+            <Button
+              key={id}
+              onClick={() => toggleTab(id)}
+              sx={{
+                display: "flex",
+                flexDirection: "column",
+                gap: 0.25,
+                py: 1.25,
+                minWidth: 0,
+                borderRadius: 2.5,
+                textTransform: "none",
+                color: "white",
+                border: selected
+                  ? "2px solid white"
+                  : "1px solid rgba(255,255,255,0.2)",
+                background: selected
+                  ? "rgba(255,255,255,0.2)"
+                  : "rgba(255,255,255,0.07)",
+              }}
+            >
+              <span style={{ fontSize: 22, lineHeight: 1 }}>{icon}</span>
+              <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+            </Button>
+          );
+        })}
       </Box>
     </Box>
   );
