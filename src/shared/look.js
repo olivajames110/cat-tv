@@ -18,6 +18,7 @@ export const CURSORS = [
   { id: "mouse", label: "🐭 Mouse", emoji: "🐭", baseSize: 36 },
   { id: "bird", label: "🐦 Bird", emoji: "🐦", baseSize: 34 },
   { id: "fish", label: "🐟 Fish", emoji: "🐟", baseSize: 34 },
+  { id: "fly", label: "🪰 Fly", emoji: "🪰", baseSize: 30 },
   { id: "bug", label: "🦋 Butterfly", emoji: "🦋", baseSize: 32 },
   { id: "laser", label: "🔴 Laser", emoji: "●", baseSize: 18, isLaser: true },
   { id: "yarn", label: "🧶 Yarn", emoji: "🧶", baseSize: 36 },
