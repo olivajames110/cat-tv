@@ -3,6 +3,8 @@ import { Box, Button, TextField, Typography } from "@mui/material";
 import useCatSocket, { fmtSeconds, useCountdown } from "./useCatSocket.js";
 import useSharedLook from "./useSharedLook.js";
 import LookControls from "../LookControls.jsx";
+import { BACKGROUNDS, CURSORS, SOUNDS } from "../shared/look.js";
+import { sceneThumbStyle } from "../scenes.js";
 
 function getClientId() {
   try {
@@ -204,12 +206,22 @@ export default function PlayerPage() {
 
 // ─── Trackpad ────────────────────────────────────────────────────────────────
 
-const LOOK_TABS = [
-  { id: "tune", icon: "⚙️", label: "Tune" },
-  { id: "cursor", icon: "🎯", label: "Cursor" },
-  { id: "bg", icon: "🖼", label: "Scenes" },
-  { id: "sound", icon: "🔊", label: "Sound" },
-];
+// Labels are "<emoji> <name>"; the boxes show the two parts on separate lines.
+function splitLabel(list, id) {
+  const label = list.find((x) => x.id === id)?.label ?? "";
+  const space = label.indexOf(" ");
+  return { icon: label.slice(0, space), name: label.slice(space + 1) };
+}
+
+// Each box shows what's picked right now, under the setting's name.
+function lookTabs(look) {
+  return [
+    { id: "tune", title: "Tune", icon: "⚙️", name: "Toy & string" },
+    { id: "cursor", title: "Toy", ...splitLabel(CURSORS, look.cursorId) },
+    { id: "bg", title: "Scene", ...splitLabel(BACKGROUNDS, look.bgId) },
+    { id: "sound", title: "Sound", ...splitLabel(SOUNDS, look.soundId) },
+  ];
+}
 
 function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
   const padRef = useRef(null);
@@ -291,8 +303,8 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
         </Box>
         <Button
           size="small"
-          variant="outlined"
-          color="inherit"
+          variant="contained"
+          color="error"
           onClick={() => send({ type: "leave" })}
           sx={{ textTransform: "none" }}
         >
@@ -346,7 +358,8 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
         </Box>
       )}
 
-      {soundReady ? (
+      {/* Hidden while a settings panel is open so it doesn't crowd the options. */}
+      {!lookTab && soundReady && (
         <Button
           variant="contained"
           size="large"
@@ -355,7 +368,8 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
         >
           🔊 Play sound
         </Button>
-      ) : (
+      )}
+      {!lookTab && !soundReady && (
         // Looks disabled, but tapping it opens the Sound settings to turn it on.
         <Button
           variant="outlined"
@@ -386,8 +400,9 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
       <Box
         sx={{ display: "grid", gridTemplateColumns: "repeat(4, 1fr)", gap: 1 }}
       >
-        {LOOK_TABS.map(({ id, icon, label }) => {
+        {lookTabs(look).map(({ id, title, icon, name }) => {
           const selected = lookTab === id;
+          const isScene = id === "bg";
           return (
             <Button
               key={id}
@@ -396,7 +411,8 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
                 display: "flex",
                 flexDirection: "column",
                 gap: 0.25,
-                py: 1.25,
+                py: 1,
+                px: 0.5,
                 minWidth: 0,
                 borderRadius: 2.5,
                 textTransform: "none",
@@ -407,10 +423,31 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
                 background: selected
                   ? "rgba(255,255,255,0.2)"
                   : "rgba(255,255,255,0.07)",
+                // The scene box shows the scene photo, dimmed behind the text.
+                ...(isScene && {
+                  background: `linear-gradient(rgba(0,0,0,0.35), rgba(0,0,0,0.6)), ${
+                    sceneThumbStyle(look.bgId).background
+                  }`,
+                  textShadow: "0 1px 3px rgba(0,0,0,0.9)",
+                }),
               }}
             >
+              <span style={{ fontSize: 10, opacity: 0.75, letterSpacing: 0.5 }}>
+                {title.toUpperCase()}
+              </span>
               <span style={{ fontSize: 22, lineHeight: 1 }}>{icon}</span>
-              <span style={{ fontSize: 12, fontWeight: 600 }}>{label}</span>
+              <span
+                style={{
+                  fontSize: 12,
+                  fontWeight: 600,
+                  maxWidth: "100%",
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  whiteSpace: "nowrap",
+                }}
+              >
+                {name}
+              </span>
             </Button>
           );
         })}
