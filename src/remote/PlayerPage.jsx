@@ -5,6 +5,7 @@ import useSharedLook from "./useSharedLook.js";
 import LookControls from "../LookControls.jsx";
 import { BACKGROUNDS, CURSORS, SOUNDS } from "../shared/look.js";
 import { sceneThumbStyle } from "../scenes.js";
+import Logo from "../assets/logo.png";
 
 function getClientId() {
   try {
@@ -129,7 +130,19 @@ export default function PlayerPage() {
         textAlign: "center",
       }}
     >
-      <Typography sx={{ fontSize: 28, fontWeight: 700 }}>🐱 Cat TV</Typography>
+      <Box
+        sx={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          gap: 1,
+        }}
+      >
+        <img src={Logo} alt="" style={{ height: 96, width: "auto" }} />
+        <Typography sx={{ fontSize: 28, fontWeight: 700 }}>
+          Catpurrccino's TV
+        </Typography>
+      </Box>
 
       {status === "queued" && (
         <>
@@ -140,7 +153,9 @@ export default function PlayerPage() {
             #{you.position}
           </Typography>
           <Typography sx={{ opacity: 0.7 }}>
-            {you.position === 1 ? "You're up next." : `${you.position - 1} ahead of you.`}{" "}
+            {you.position === 1
+              ? "You're up next."
+              : `${you.position - 1} ahead of you.`}{" "}
             Keep this page open — your phone will buzz when it's your turn.
           </Typography>
           <Button
@@ -166,8 +181,7 @@ export default function PlayerPage() {
             <>
               <Typography sx={{ opacity: 0.8 }}>
                 Get in line to control the toy on the TV.
-                {state?.queueLength > 0 &&
-                  ` ${state.queueLength} waiting.`}
+                {state?.queueLength > 0 && ` ${state.queueLength} waiting.`}
               </Typography>
               <TextField
                 value={name}
@@ -387,7 +401,9 @@ function Trackpad({ you, send, connected, look, onLookChange, queueLength }) {
           }}
         >
           <span style={{ fontSize: 18 }}>
-            {look.soundId === "none" ? "🔇 Sound is off" : "🔁 Sound is on auto play"}
+            {look.soundId === "none"
+              ? "🔇 Sound is off"
+              : "🔁 Sound is on auto play"}
           </span>
           <span style={{ fontSize: 13, opacity: 0.8 }}>
             {look.soundId === "none"
