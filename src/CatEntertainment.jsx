@@ -388,16 +388,47 @@ function AutoToy({ look, ping, autoSpeed }) {
   return <ToyView pos={pos} look={look} ping={ping} />;
 }
 
+// ─── Idle Toy ─────────────────────────────────────────────────────────────────
+
+// Where the toy was last drawn, so a phone takes over without a jump.
+let lastToyPos = null;
+
+// Bobs gently in the gap between the TV's invitation text and the QR panel.
+function IdleToy({ look, ping }) {
+  const [pos, setPos] = useState(() => idlePos(0));
+
+  useEffect(() => {
+    let raf;
+    const loop = (t) => {
+      const p = idlePos(t);
+      lastToyPos = p;
+      setPos(p);
+      raf = requestAnimationFrame(loop);
+    };
+    raf = requestAnimationFrame(loop);
+    return () => cancelAnimationFrame(raf);
+  }, []);
+
+  return <ToyView pos={pos} look={look} ping={ping} />;
+}
+
+function idlePos(t) {
+  return {
+    x: window.innerWidth * 0.63,
+    y: window.innerHeight * 0.42 + Math.sin(t / 700) * 18,
+  };
+}
+
 // ─── Remote Toy (driven from a phone) ─────────────────────────────────────────
 
 // A swipe across the full width of the phone moves the toy this many TV widths.
 const REMOTE_GAIN = 1.2;
 
+// Starts wherever the toy last was so it never jumps.
 function RemoteToy({ deltaRef, look, ping }) {
-  const [pos, setPos] = useState(() => ({
-    x: window.innerWidth / 2,
-    y: window.innerHeight / 2,
-  }));
+  const [pos, setPos] = useState(
+    () => lastToyPos ?? { x: window.innerWidth / 2, y: window.innerHeight / 2 }
+  );
   const posRef = useRef(pos);
 
   useEffect(() => {
@@ -416,6 +447,7 @@ function RemoteToy({ deltaRef, look, ping }) {
           ),
         };
         deltaRef.current = { dx: 0, dy: 0 };
+        lastToyPos = posRef.current;
         setPos(posRef.current);
       }
       raf = requestAnimationFrame(loop);
@@ -475,8 +507,8 @@ function BgDecorations({ bgId }) {
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
 // The TV only shows the toy: a phone drives it during a turn. Otherwise it
-// sits still, or roams on its own if the admin turned on auto move. The mouse
-// doesn't control anything.
+// bobs beside the QR panel, or roams on its own if the admin turned on auto
+// move. The mouse doesn't control anything.
 const AUTO_SPEED = 40;
 
 export default function CatEntertainmentApp() {
@@ -613,11 +645,14 @@ export default function CatEntertainmentApp() {
 
       <BgDecorations bgId={bgId} />
 
-      {/* With auto move off, the toy stays wherever the last player left it. */}
-      {remoteActive || !remoteState?.autoMove ? (
+      {/* During a turn the phone drives the toy; otherwise it roams (auto
+          move) or bobs beside the QR panel. */}
+      {remoteActive ? (
         <RemoteToy key="r" deltaRef={remoteDeltaRef} look={look} ping={ping} />
-      ) : (
+      ) : remoteState?.autoMove ? (
         <AutoToy key="a" look={look} ping={ping} autoSpeed={AUTO_SPEED} />
+      ) : (
+        <IdleToy key="i" look={look} ping={ping} />
       )}
 
       <TvOverlay state={remoteState} toast={toast} />

@@ -43,6 +43,7 @@ const DEFAULT_SETTINGS = {
   maxSessionSeconds: 150,
   qrSizePercent: 100, // of the TV's full-size QR panel; admin can go down to 25
   autoMove: false, // toy roams on its own while nobody is playing
+  catName: "", // "Play with <catName>" on the TV; blank means "the cat"
   look: DEFAULT_LOOK,
 };
 
@@ -169,6 +170,7 @@ function publicState() {
     maxSessionSeconds: settings.maxSessionSeconds,
     qrSizePercent: settings.qrSizePercent,
     autoMove: settings.autoMove,
+    catName: settings.catName,
     look: settings.look,
   };
 }
@@ -376,6 +378,9 @@ function handleMessage(ws, msg) {
             10,
             3600
           );
+        }
+        if (typeof msg.catName === "string") {
+          settings.catName = msg.catName.trim().slice(0, MAX_NAME_LEN);
         }
         if (typeof msg.autoMove === "boolean") {
           settings.autoMove = msg.autoMove;

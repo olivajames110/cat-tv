@@ -205,6 +205,7 @@ export default function PlayerPage() {
       <DoneView
         ended={ended}
         name={name}
+        catName={state?.catName}
         stats={stats}
         onDone={() => setEnded(null)}
       />
@@ -238,7 +239,7 @@ function JoinView({ state, token, error, name, setName, connected, onJoin }) {
       <Brand />
       <div className="join-hero pad-x">
         <div className="hero-icon">😺</div>
-        <h3>Play with the cat</h3>
+        <h3>Play with {state?.catName || "the cat"}</h3>
         <p>
           {token
             ? `Join the line and take control of the toy on the TV for ${turn}.`
@@ -1005,7 +1006,7 @@ function SoundPane({ look, onLookChange }) {
 
 // ─── Time's up ───────────────────────────────────────────────────────────────
 
-function DoneView({ ended, name, stats, onDone }) {
+function DoneView({ ended, name, catName, stats, onDone }) {
   const timeUp = ended === "timeUp";
   // "left" here means the player tapped End during their turn.
   const thanks = timeUp || ended === "left";
@@ -1021,7 +1022,7 @@ function DoneView({ ended, name, stats, onDone }) {
               ? `Thanks for playing, ${name}!`
               : (ENDED_TEXT[ended] ?? "Your turn is over.")}
         </h3>
-        {thanks && <p>The cat says thanks for playing.</p>}
+        {thanks && <p>{catName || "The cat"} says thanks for playing.</p>}
         {stats && (
           <div className="stats">
             <div className="stat">

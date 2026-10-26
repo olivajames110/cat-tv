@@ -1,4 +1,4 @@
-/* TV overlay: the idle invitation, scan panel, now-playing pill and toasts.
+/* TV overlay: the landing screen, now-playing pill, small QR card and toasts.
    Sizes use vw so the layout holds at any TV size. */
 
 .tvo {
@@ -25,145 +25,140 @@
   inset: 0;
   background: linear-gradient(
     90deg,
-    rgba(10, 12, 20, 0.72) 0%,
-    rgba(10, 12, 20, 0.35) 45%,
-    rgba(10, 12, 20, 0) 70%
+    rgba(6, 12, 26, 0.8) 0%,
+    rgba(6, 12, 26, 0.55) 32%,
+    rgba(6, 12, 26, 0.15) 55%,
+    rgba(6, 12, 26, 0) 66%
   );
+  transition: opacity 0.6s;
+}
+
+.tvo .brand-corner {
+  position: absolute;
+  left: 2.4vw;
+  top: 2.4vw;
+  height: 6vw;
+  width: auto;
+  filter: drop-shadow(0 0.3vw 1vw rgba(0, 0, 0, 0.35));
   transition: opacity 0.6s;
 }
 
 .tvo .attract {
   position: absolute;
-  left: 2.48vw;
+  left: 5vw;
   top: 50%;
   transform: translateY(-50%);
-  max-width: 27.5vw;
+  max-width: 52vw;
   color: #fff;
   transition:
     opacity 0.6s,
     transform 0.6s;
 }
-.tvo .logo {
-  display: block;
-  height: 9vw;
-  width: auto;
-  margin-bottom: 1.2vw;
-  filter: drop-shadow(0 0.4vw 1.2vw rgba(0, 0, 0, 0.35));
-}
-.tvo .eyebrow {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.33vw;
-  font-size: 0.72vw;
-  font-weight: 700;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  background: rgba(255, 255, 255, 0.14);
-  padding: 0.28vw 0.55vw;
-  border-radius: 999px;
-  backdrop-filter: blur(6px);
-}
 .tvo .attract h2 {
-  font-size: 2.97vw;
+  font-size: 5.8vw;
   line-height: 1.02;
-  margin: 0.88vw 0 0.77vw;
+  margin: 0 0 1.4vw;
   font-weight: 800;
   letter-spacing: -0.03em;
-  text-shadow: 0 0.17vw 1.1vw rgba(0, 0, 0, 0.35);
+  text-shadow: 0 0.3vw 2vw rgba(0, 0, 0, 0.35);
 }
 .tvo .attract h2 em {
   font-style: normal;
   color: #ffb199;
 }
+.tvo .tagline {
+  margin: 0 0 2.4vw;
+  font-size: 1.7vw;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.88);
+  text-shadow: 0 0.2vw 1vw rgba(0, 0, 0, 0.4);
+}
+.tvo .tagline b {
+  color: #fff;
+  font-weight: 700;
+}
 .tvo .steps {
   display: flex;
-  gap: 0.55vw;
+  gap: 1vw;
   flex-wrap: wrap;
-  margin: 0 0 1.1vw;
+  margin: 0;
   padding: 0;
   list-style: none;
 }
 .tvo .steps li {
   display: flex;
   align-items: center;
-  gap: 0.39vw;
-  font-size: 0.8vw;
+  gap: 0.7vw;
+  font-size: 1.6vw;
   font-weight: 600;
   background: rgba(255, 255, 255, 0.12);
-  padding: 0.39vw 0.66vw 0.39vw 0.39vw;
+  padding: 0.7vw 1.2vw 0.7vw 0.7vw;
   border-radius: 999px;
   backdrop-filter: blur(6px);
 }
 .tvo .steps b {
   display: grid;
   place-items: center;
-  width: 1.21vw;
-  height: 1.21vw;
+  width: 2.4vw;
+  height: 2.4vw;
   border-radius: 50%;
   background: var(--accent);
-  font-size: 0.66vw;
-}
-.tvo .point {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.55vw;
-  background: var(--accent);
-  color: #fff;
-  font-weight: 700;
-  font-size: 0.99vw;
-  padding: 0.61vw 1.1vw;
-  border-radius: 999px;
-  box-shadow: 0 0.55vw 1.65vw -0.55vw rgba(255, 106, 61, 0.8);
-}
-.tvo .point .arr {
-  display: inline-block;
-  animation: tvo-nudge 1.1s ease-in-out infinite;
-}
-@keyframes tvo-nudge {
-  0%,
-  100% {
-    transform: translateX(0);
-  }
-  50% {
-    transform: translateX(0.66vw);
-  }
+  font-size: 1.2vw;
 }
 
-/* Scan panel: top right while idle, a small card bottom right while playing */
+/* Scan panel: centred on the right while idle, a small card while playing */
 .tvo .side {
   position: absolute;
-  right: 1.21vw;
-  top: 1.21vw; /* sized to its content */
-  width: calc(12.1vw * var(--qr));
-  background: rgba(255, 255, 255, 0.94);
+  right: 3.5vw;
+  top: 50%;
+  transform: translateY(-50%);
+  width: calc(27vw * var(--qr));
+  background: rgba(255, 255, 255, 0.96);
   backdrop-filter: blur(12px);
-  border-radius: 1.1vw;
-  padding: calc(0.99vw * var(--qr));
+  border-radius: 2.2vw;
+  padding: calc(2vw * var(--qr)) calc(2.2vw * var(--qr));
   display: flex;
   flex-direction: column;
-  gap: 0.61vw;
-  box-shadow: 0 1.1vw 2.2vw -1.1vw rgba(0, 0, 0, 0.4);
+  gap: 1.2vw;
+  box-shadow: 0 2vw 4vw -2vw rgba(0, 0, 0, 0.4);
   transition: all 0.6s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 .tvo .scan-title {
-  font-size: 1.26vw;
+  font-size: 2.9vw;
   font-weight: 800;
   letter-spacing: -0.02em;
   line-height: 1.05;
   text-align: center;
 }
-.tvo .scan-sub {
-  font-size: 0.63vw;
-  color: var(--muted);
-  text-align: center;
-  margin-top: -0.28vw;
+.tvo .scan-hint {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.7vw;
+  font-size: 1.5vw;
+  font-weight: 700;
+  margin-top: -0.2vw;
+}
+.tvo .scan-hint .up {
+  display: inline-block;
+  color: var(--accent);
+  animation: tvo-nudgeup 1.1s ease-in-out infinite;
+}
+@keyframes tvo-nudgeup {
+  0%,
+  100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-0.5vw);
+  }
 }
 .tvo .qr {
   position: relative;
   background: #fff;
-  border-radius: 0.72vw;
-  padding: 0.55vw;
-  border: 0.17vw solid var(--accent);
+  border-radius: 1.5vw;
+  padding: 1.3vw;
+  border: 0.3vw solid var(--accent);
   animation: tvo-glow 2.2s ease-in-out infinite;
 }
 .tvo .qr img {
@@ -182,8 +177,8 @@
   background: var(--accent);
   display: grid;
   place-items: center;
-  font-size: calc(0.88vw * var(--qr));
-  border: 0.19vw solid #fff;
+  font-size: calc(2vw * var(--qr));
+  border: 0.35vw solid #fff;
 }
 @keyframes tvo-glow {
   0%,
@@ -191,25 +186,49 @@
     box-shadow: 0 0 0 0 rgba(255, 106, 61, 0.45);
   }
   50% {
-    box-shadow: 0 0 0 0.55vw rgba(255, 106, 61, 0);
+    box-shadow: 0 0 0 1vw rgba(255, 106, 61, 0);
+  }
+}
+.tvo .nowait {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.9vw;
+  background: #dcfce7;
+  color: #047857;
+  font-weight: 800;
+  font-size: 1.7vw;
+  padding: 1.1vw;
+  border-radius: 1.2vw;
+}
+.tvo .nowait i {
+  width: 1vw;
+  height: 1vw;
+  border-radius: 50%;
+  background: #10b981;
+  animation: tvo-ping 1.6s ease-out infinite;
+}
+@keyframes tvo-ping {
+  0% {
+    box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.6);
+  }
+  100% {
+    box-shadow: 0 0 0 1vw rgba(16, 185, 129, 0);
   }
 }
 .tvo .queue {
   border-top: 1px solid var(--line);
-  padding-top: 0.55vw;
-  flex: 1;
-  min-height: 0;
-  overflow: hidden;
+  padding-top: 1vw;
 }
 .tvo .q-head {
   display: flex;
   justify-content: space-between;
-  font-size: 0.61vw;
+  font-size: 1.1vw;
   font-weight: 700;
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  margin-bottom: 0.39vw;
+  margin-bottom: 0.7vw;
 }
 .tvo .q-list {
   list-style: none;
@@ -217,71 +236,69 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 0.28vw;
+  gap: 0.5vw;
 }
 .tvo .q-list li {
   display: flex;
   align-items: center;
-  gap: 0.44vw;
-  font-size: 0.74vw;
+  gap: 0.8vw;
+  font-size: 1.5vw;
   font-weight: 600;
   animation: tvo-slidein 0.4s ease;
 }
 .tvo .q-list .n {
   display: grid;
   place-items: center;
-  width: 1.1vw;
-  height: 1.1vw;
+  width: 2vw;
+  height: 2vw;
   border-radius: 50%;
   background: #f3f4f6;
-  font-size: 0.55vw;
+  font-size: 1vw;
   color: var(--muted);
-}
-.tvo .q-list .empty {
-  color: var(--muted);
-  font-weight: 500;
-  font-size: 0.66vw;
 }
 @keyframes tvo-slidein {
   from {
     opacity: 0;
-    transform: translateY(0.28vw);
+    transform: translateY(0.5vw);
   }
 }
 .tvo .compact-q {
   display: none;
-  font-size: 0.55vw;
+  font-size: 1vw;
   color: var(--muted);
   text-align: center;
   font-weight: 600;
 }
 
-/* Playing: invitation fades, scan panel shrinks to the bottom-right */
-.tvo.playing .scrim {
+/* Playing: invitation and logo fade, scan panel shrinks to the bottom-right */
+.tvo.playing .scrim,
+.tvo.playing .brand-corner {
   opacity: 0;
 }
 .tvo.playing .attract {
   opacity: 0;
-  transform: translate(-1.65vw, -50%);
+  transform: translate(-3vw, -50%);
 }
 .tvo.playing .side {
-  top: auto;
-  bottom: 1.21vw;
-  width: calc(7.15vw * var(--qr));
-  padding: calc(0.61vw * var(--qr));
-  gap: 0.33vw;
-  border-radius: 0.77vw;
+  top: calc(100% - 2.2vw);
+  right: 2.2vw;
+  transform: translateY(-100%);
+  width: calc(13vw * var(--qr));
+  padding: calc(1.1vw * var(--qr));
+  gap: 0.6vw;
+  border-radius: 1.4vw;
 }
 .tvo.playing .scan-title {
-  font-size: 0.72vw;
+  font-size: 1.3vw;
 }
-.tvo.playing .scan-sub,
+.tvo.playing .scan-hint,
+.tvo.playing .nowait,
 .tvo.playing .queue {
   display: none;
 }
 .tvo.playing .qr {
-  border-width: 0.11vw;
-  padding: 0.33vw;
+  border-width: 0.2vw;
+  padding: 0.6vw;
   animation: none;
 }
 .tvo.playing .compact-q {
@@ -290,7 +307,7 @@
 
 /* Small QR (admin set it under 60%): just the code */
 .tvo.qr-small .scan-title,
-.tvo.qr-small .scan-sub,
+.tvo.qr-small .scan-hint,
 .tvo.qr-small .compact-q {
   display: none;
 }
@@ -298,53 +315,53 @@
 /* Now playing pill */
 .tvo .np {
   position: absolute;
-  left: 1.21vw;
-  top: 1.21vw;
+  left: 2.2vw;
+  top: 2.2vw;
   display: flex;
   align-items: center;
-  gap: 0.55vw;
+  gap: 1vw;
   background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(10px);
-  padding: 0.44vw 0.88vw 0.44vw 0.44vw;
+  padding: 0.8vw 1.6vw 0.8vw 0.8vw;
   border-radius: 999px;
-  box-shadow: 0 0.55vw 1.65vw -0.55vw rgba(0, 0, 0, 0.35);
-  transition:
-    opacity 0.5s,
-    transform 0.5s;
+  box-shadow: 0 1vw 3vw -1vw rgba(0, 0, 0, 0.35);
+  animation: tvo-drop 0.5s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.tvo:not(.playing) .np {
-  opacity: 0;
-  transform: translateY(-0.55vw);
+@keyframes tvo-drop {
+  from {
+    opacity: 0;
+    transform: translateY(-1vw);
+  }
 }
 .tvo .avatar {
   display: grid;
   place-items: center;
-  width: 1.76vw;
-  height: 1.76vw;
+  width: 3.2vw;
+  height: 3.2vw;
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
   font-weight: 800;
-  font-size: 0.83vw;
+  font-size: 1.5vw;
 }
 .tvo .np .lbl {
-  font-size: 0.52vw;
+  font-size: 0.95vw;
   color: var(--muted);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.08em;
 }
 .tvo .np .nm {
-  font-size: 0.88vw;
+  font-size: 1.6vw;
   font-weight: 800;
   letter-spacing: -0.01em;
 }
 .tvo .np .tm {
   font-variant-numeric: tabular-nums;
-  font-size: 0.88vw;
+  font-size: 1.6vw;
   font-weight: 700;
-  margin-left: 0.55vw;
-  min-width: 2.75vw;
+  margin-left: 1vw;
+  min-width: 5vw;
   text-align: right;
 }
 .tvo .np .tm.low {
@@ -352,10 +369,10 @@
 }
 .tvo .np .bar {
   position: absolute;
-  left: 2.75vw;
-  right: 1.1vw;
-  bottom: 0.28vw;
-  height: 0.14vw;
+  left: 5vw;
+  right: 2vw;
+  bottom: 0.5vw;
+  height: 0.25vw;
   background: #eee;
   border-radius: 9px;
   overflow: hidden;
@@ -371,14 +388,14 @@
 .tvo .toast {
   position: absolute;
   left: 50%;
-  bottom: 1.65vw;
-  transform: translate(-50%, 1.1vw);
+  bottom: 3vw;
+  transform: translate(-50%, 2vw);
   opacity: 0;
   background: rgba(17, 24, 39, 0.9);
   color: #fff;
   font-weight: 700;
-  font-size: 0.94vw;
-  padding: 0.55vw 1.1vw;
+  font-size: 1.7vw;
+  padding: 1vw 2vw;
   border-radius: 999px;
   transition: all 0.4s cubic-bezier(0.2, 0.8, 0.2, 1);
   white-space: nowrap;

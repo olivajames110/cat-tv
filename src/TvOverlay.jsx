@@ -21,9 +21,16 @@ function joinUrlFor(state) {
   return base.toString();
 }
 
-// Everything drawn over the scene: while nobody plays, an invitation and a
-// big scan panel; during a turn, a now-playing pill and a small QR card.
-// `toast` is { text, show } from the parent.
+// "150" → "2:30 turns", "120" → "2-minute turns", "45" → "45-second turns".
+function turnLength(seconds) {
+  if (seconds < 60) return `${seconds}-second turns`;
+  if (seconds % 60 === 0) return `${seconds / 60}-minute turns`;
+  return `${fmtSeconds(seconds)} turns`;
+}
+
+// Everything drawn over the scene. While nobody plays: the logo, an
+// invitation and a big scan panel. During a turn: a now-playing pill and a
+// small QR card. `toast` is { text, show } from the parent.
 export default function TvOverlay({ state, toast }) {
   const joinUrl = state?.joinToken ? joinUrlFor(state) : null;
   const [qr, setQr] = useState(null);
@@ -36,7 +43,7 @@ export default function TvOverlay({ state, toast }) {
     // High error correction so the paw badge in the middle doesn't break it.
     QRCode.toDataURL(joinUrl, {
       margin: 0,
-      width: 400,
+      width: 600,
       errorCorrectionLevel: "H",
     }).then((url) => {
       if (!cancelled) setQr(url);
@@ -49,6 +56,7 @@ export default function TvOverlay({ state, toast }) {
   const scale = (state?.qrSizePercent ?? 100) / 100;
   const waiting = state?.waiting ?? [];
   const totalSeconds = active ? active.totalMs / 1000 : 1;
+  const catName = state?.catName || "the cat";
 
   return (
     <div
@@ -56,15 +64,18 @@ export default function TvOverlay({ state, toast }) {
       style={{ "--qr": scale }}
     >
       <div className="scrim" />
+      <img className="brand-corner" src={Logo} alt="Catpurrccino's" />
 
       <div className="attract">
-        <img className="logo" src={Logo} alt="Catpurrccino's" />
-        <span className="eyebrow">Catpurrccino's TV · Interactive</span>
         <h2>
-          Play with the cat
+          Play with {catName}
           <br />
           <em>from your phone</em>
         </h2>
+        <p className="tagline">
+          <b>{turnLength(state?.maxSessionSeconds ?? 0)}</b> · Free · No app
+          needed
+        </p>
         <ol className="steps">
           <li>
             <b>1</b>Scan the code
@@ -76,16 +87,13 @@ export default function TvOverlay({ state, toast }) {
             <b>3</b>Move the toy
           </li>
         </ol>
-        <span className="point">
-          Point your camera at the QR code <span className="arr">→</span>
-        </span>
       </div>
 
       {active && (
         <div className="np">
           <div className="avatar">{active.name.charAt(0).toUpperCase()}</div>
           <div>
-            <div className="lbl">Now playing</div>
+            <div className="lbl">Playing with {catName}</div>
             <div className="nm">{active.name}</div>
           </div>
           <div className={`tm${secondsLeft <= 10 ? " low" : ""}`}>
@@ -104,34 +112,38 @@ export default function TvOverlay({ state, toast }) {
       {qr && (
         <aside className="side">
           <div className="scan-title">Scan to play</div>
-          <div className="scan-sub">Free · no app needed</div>
           <div className="qr">
             <img src={qr} alt="Scan to play" />
             <span className="paw">🐾</span>
+          </div>
+          <div className="scan-hint">
+            <span className="up">↑</span> Point your camera here
           </div>
           <div className="compact-q">
             {waiting.length > 0
               ? `Scan to join · ${waiting.length} waiting`
               : "Scan to play next"}
           </div>
-          <div className="queue">
-            <div className="q-head">
-              <span>Up next</span>
-              {waiting.length > 0 && <span>{waiting.length}</span>}
+          {waiting.length === 0 ? (
+            <div className="nowait">
+              <i /> No wait — play now
             </div>
-            <ul className="q-list">
-              {waiting.length === 0 ? (
-                <li className="empty">No one yet — you could be first!</li>
-              ) : (
-                waiting.slice(0, 5).map((name, i) => (
+          ) : (
+            <div className="queue">
+              <div className="q-head">
+                <span>Up next</span>
+                <span>{waiting.length}</span>
+              </div>
+              <ul className="q-list">
+                {waiting.slice(0, 3).map((name, i) => (
                   <li key={`${i}-${name}`}>
                     <span className="n">{i + 1}</span>
                     {name}
                   </li>
-                ))
-              )}
-            </ul>
-          </div>
+                ))}
+              </ul>
+            </div>
+          )}
         </aside>
       )}
 

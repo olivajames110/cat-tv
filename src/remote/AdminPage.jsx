@@ -78,6 +78,7 @@ function AdminConsole({ password, onSignOut }) {
   const [authFailed, setAuthFailed] = useState(false);
   const [draft, setDraft] = useState(null);
   const [qrDraft, setQrDraft] = useState(null); // while dragging the slider
+  const [catDraft, setCatDraft] = useState(null);
 
   const { connected, state, send } = useCatSocket(
     { role: "admin", password },
@@ -219,12 +220,45 @@ function AdminConsole({ password, onSignOut }) {
 
       <Divider sx={{ my: 2 }} />
 
+      <Typography sx={{ fontWeight: 700, mb: 1 }}>Cat's name</Typography>
+      <Typography variant="body2" sx={{ opacity: 0.7, mb: 1.5 }}>
+        Shown on the TV as "Play with {state.catName || "the cat"}". Leave blank
+        for "the cat".
+      </Typography>
+      <Box
+        component="form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          send({ type: "settings", catName: catDraft ?? state.catName });
+          setCatDraft(null);
+        }}
+        sx={{ display: "flex", gap: 1 }}
+      >
+        <TextField
+          size="small"
+          label="Name"
+          placeholder="the cat"
+          value={catDraft ?? state.catName}
+          onChange={(e) => setCatDraft(e.target.value)}
+          inputProps={{ maxLength: 20 }}
+        />
+        <Button
+          type="submit"
+          variant="contained"
+          disabled={catDraft == null || catDraft.trim() === state.catName}
+        >
+          Save
+        </Button>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
       <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
         <Box sx={{ flex: 1 }}>
           <Typography sx={{ fontWeight: 700 }}>Auto move</Typography>
           <Typography variant="body2" sx={{ opacity: 0.7 }}>
-            While nobody is playing, the toy roams around on its own. When off,
-            it stays where the last player left it.
+            While nobody is playing, the toy roams around the screen. When off,
+            it bobs gently beside the QR code.
           </Typography>
         </Box>
         <Switch

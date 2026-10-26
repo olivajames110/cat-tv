@@ -8,7 +8,7 @@ the toy.
 | -------- | -------------------------------- |
 | `/`      | The TV. Shows the toy and the join QR code. |
 | `/play`  | Phones, via the QR code. Join the line, then drag to move the toy, pick the scene, toy, tuning and sound, and add a minute when nobody is waiting. |
-| `/admin` | The admin. Sets the max session length and QR size, skips or removes players, refreshes the TV and phones. |
+| `/admin` | The admin. Sets the cat's name, max session length, QR size and auto move, skips or removes players, refreshes the TV and phones. |
 
 ## Running
 
@@ -56,7 +56,7 @@ The admin's session length is saved to `data/settings.json`.
   their turn.
 - While nobody is waiting, the player can add 30 s at a time, up to 3 minutes extra.
 - Players waiting in line can pick a preset (toy, sound, scene and string together); it applies when their turn starts.
-- While nobody is playing, the TV shows an invitation and the toy stays still (or roams, if the admin turns on Auto move). The mouse on the TV does nothing.
+- While nobody is playing, the TV shows "Play with <cat> from your phone" with a big QR code, and the toy bobs beside it (or roams, if the admin turns on Auto move). The mouse on the TV does nothing.
 
 ## Scenes
 
