@@ -68,6 +68,16 @@ const cursorById = (id) => CURSORS.find((c) => c.id === id) ?? CURSORS[0];
 const colorById = (id) =>
   STRING_COLORS.find((c) => c.id === id) ?? STRING_COLORS[1];
 
+// 150 → "2 minutes, 30 seconds", 60 → "1 minute".
+function readDuration(seconds) {
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  const unit = (n, word) => `${n} ${word}${n === 1 ? "" : "s"}`;
+  return [m && unit(m, "minute"), s && unit(s, "second")]
+    .filter(Boolean)
+    .join(", ");
+}
+
 function fmtWait(seconds) {
   if (seconds < 60) return `${Math.max(5, Math.round(seconds / 5) * 5)} sec`;
   return `${Math.round(seconds / 60)} min`;
@@ -232,7 +242,7 @@ export default function PlayerPage() {
 function JoinView({ state, token, error, name, setName, connected, onJoin }) {
   const waitingCount = state?.queueLength ?? 0;
   const wait = waitSeconds(state, waitingCount);
-  const turn = fmtSeconds(state?.maxSessionSeconds ?? 0);
+  const turn = readDuration(state?.maxSessionSeconds ?? 0);
 
   return (
     <section className="view">

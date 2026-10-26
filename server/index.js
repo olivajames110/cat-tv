@@ -40,7 +40,7 @@ const MAX_EXTEND_MS = 3 * 60_000; // most extra time one turn can get
 // ─── Settings ────────────────────────────────────────────────────────────────
 
 const DEFAULT_SETTINGS = {
-  maxSessionSeconds: 150,
+  maxSessionSeconds: 120,
   qrSizePercent: 100, // of the TV's full-size QR panel; admin can go down to 25
   autoMove: false, // toy roams on its own while nobody is playing
   catName: "", // "Play with <catName>" on the TV; blank means "the cat"

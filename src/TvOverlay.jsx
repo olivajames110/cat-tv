@@ -21,11 +21,12 @@ function joinUrlFor(state) {
   return base.toString();
 }
 
-// "150" → "2:30 turns", "120" → "2-minute turns", "45" → "45-second turns".
+// 150 → "2 minute, 30 second turns", 120 → "2 minute turns".
 function turnLength(seconds) {
-  if (seconds < 60) return `${seconds}-second turns`;
-  if (seconds % 60 === 0) return `${seconds / 60}-minute turns`;
-  return `${fmtSeconds(seconds)} turns`;
+  const m = Math.floor(seconds / 60);
+  const s = seconds % 60;
+  const parts = [m && `${m} minute`, s && `${s} second`].filter(Boolean);
+  return `${parts.join(", ")} turns`;
 }
 
 // Everything drawn over the scene. While nobody plays: the logo, an
