@@ -8,7 +8,9 @@
   --muted: #6b7280;
   --line: #e5e7eb;
   --qr: 1; /* admin's QR size, 0.25–1 */
-  --u: 0.6vw;
+  /* 0.6% of the width on a 16:9 screen; on wider screens (ultrawide) the
+     height limits it so nothing outgrows the screen. */
+  --u: min(0.6vw, 1.0667vh);
   position: fixed;
   inset: 0;
   z-index: 9000; /* under the toy so the cat always sees it */
