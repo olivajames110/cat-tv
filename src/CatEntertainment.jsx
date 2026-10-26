@@ -414,7 +414,7 @@ function IdleToy({ look, ping }) {
 
 function idlePos(t) {
   return {
-    x: window.innerWidth * 0.63,
+    x: window.innerWidth * 0.58,
     y: window.innerHeight * 0.42 + Math.sin(t / 700) * 18,
   };
 }
