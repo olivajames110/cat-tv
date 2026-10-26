@@ -42,6 +42,7 @@ const MAX_EXTEND_MS = 3 * 60_000; // most extra time one turn can get
 const DEFAULT_SETTINGS = {
   maxSessionSeconds: 150,
   qrSizePercent: 100, // of the TV's full-size QR panel; admin can go down to 25
+  autoMove: false, // toy roams on its own while nobody is playing
   look: DEFAULT_LOOK,
 };
 
@@ -167,6 +168,7 @@ function publicState() {
     waiting: waiting.slice(0, 20).map((e) => e.name),
     maxSessionSeconds: settings.maxSessionSeconds,
     qrSizePercent: settings.qrSizePercent,
+    autoMove: settings.autoMove,
     look: settings.look,
   };
 }
@@ -374,6 +376,9 @@ function handleMessage(ws, msg) {
             10,
             3600
           );
+        }
+        if (typeof msg.autoMove === "boolean") {
+          settings.autoMove = msg.autoMove;
         }
         if (finite(msg.qrSizePercent)) {
           settings.qrSizePercent = clamp(

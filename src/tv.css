@@ -43,6 +43,13 @@
     opacity 0.6s,
     transform 0.6s;
 }
+.tvo .logo {
+  display: block;
+  height: 9vw;
+  width: auto;
+  margin-bottom: 1.2vw;
+  filter: drop-shadow(0 0.4vw 1.2vw rgba(0, 0, 0, 0.35));
+}
 .tvo .eyebrow {
   display: inline-flex;
   align-items: center;

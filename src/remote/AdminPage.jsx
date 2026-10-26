@@ -6,6 +6,7 @@ import {
   IconButton,
   Paper,
   Slider,
+  Switch,
   TextField,
   Typography,
 } from "@mui/material";
@@ -214,6 +215,25 @@ function AdminConsole({ password, onSignOut }) {
         <Typography sx={{ width: 48, textAlign: "right" }}>
           {qrDraft ?? state.qrSizePercent}%
         </Typography>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
+      <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
+        <Box sx={{ flex: 1 }}>
+          <Typography sx={{ fontWeight: 700 }}>Auto move</Typography>
+          <Typography variant="body2" sx={{ opacity: 0.7 }}>
+            While nobody is playing, the toy roams around on its own. When off,
+            it stays where the last player left it.
+          </Typography>
+        </Box>
+        <Switch
+          checked={!!state.autoMove}
+          onChange={(e) =>
+            send({ type: "settings", autoMove: e.target.checked })
+          }
+          inputProps={{ "aria-label": "Auto move" }}
+        />
       </Box>
 
       <Divider sx={{ my: 2 }} />

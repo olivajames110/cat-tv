@@ -474,8 +474,9 @@ function BgDecorations({ bgId }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
-// The TV only shows the toy: a phone drives it during a turn, otherwise it
-// roams on its own. The mouse doesn't control anything.
+// The TV only shows the toy: a phone drives it during a turn. Otherwise it
+// sits still, or roams on its own if the admin turned on auto move. The mouse
+// doesn't control anything.
 const AUTO_SPEED = 40;
 
 export default function CatEntertainmentApp() {
@@ -612,7 +613,8 @@ export default function CatEntertainmentApp() {
 
       <BgDecorations bgId={bgId} />
 
-      {remoteActive ? (
+      {/* With auto move off, the toy stays wherever the last player left it. */}
+      {remoteActive || !remoteState?.autoMove ? (
         <RemoteToy key="r" deltaRef={remoteDeltaRef} look={look} ping={ping} />
       ) : (
         <AutoToy key="a" look={look} ping={ping} autoSpeed={AUTO_SPEED} />

@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
 import { fmtSeconds, useCountdown } from "./remote/useCatSocket.js";
+import Logo from "./assets/logo.png";
 import "./tv.css";
 
 function joinUrlFor(state) {
@@ -57,7 +58,8 @@ export default function TvOverlay({ state, toast }) {
       <div className="scrim" />
 
       <div className="attract">
-        <span className="eyebrow">🐾 Catpurrccino's TV · Interactive</span>
+        <img className="logo" src={Logo} alt="Catpurrccino's" />
+        <span className="eyebrow">Catpurrccino's TV · Interactive</span>
         <h2>
           Play with the cat
           <br />
