@@ -667,6 +667,10 @@ function TrackpadPane({
   const [speed, setSpeed] = useState(() =>
     Number(loadStored("catTvSpeed", DEFAULT_SPEED))
   );
+  // Collapsing the quick picks leaves more room for the trackpad; remembered.
+  const [picksCollapsed, setPicksCollapsed] = useState(
+    () => loadStored("catTvPicksCollapsed", null) != null
+  );
   const speedRef = useRef(speed);
   useEffect(() => {
     speedRef.current = speed;
@@ -746,21 +750,40 @@ function TrackpadPane({
     <div className="pane">
       <div>
         <div className="setup-head">
-          <h4>Quick picks</h4>
-          {preset ? (
-            <span className="preset-status hint-only">Swipe for more →</span>
-          ) : (
+          <button
+            className="collapse-toggle"
+            aria-expanded={!picksCollapsed}
+            onClick={() => {
+              setPicksCollapsed(!picksCollapsed);
+              store("catTvPicksCollapsed", picksCollapsed ? null : 1);
+            }}
+          >
+            <svg
+              className={`chev${picksCollapsed ? "" : " open"}`}
+              viewBox="0 0 24 24"
+            >
+              <path d="M9 6l6 6-6 6" />
+            </svg>
+            <h4>Quick picks</h4>
+          </button>
+          {!preset ? (
             <span className="preset-status">Custom</span>
+          ) : (
+            !picksCollapsed && (
+              <span className="preset-status hint-only">Swipe for more →</span>
+            )
           )}
         </div>
-        <PresetRow
-          small
-          base={look}
-          selectedId={preset?.id}
-          onPick={(id) =>
-            onLookChange(PRESETS.find((p) => p.id === id).look, id)
-          }
-        />
+        {!picksCollapsed && (
+          <PresetRow
+            small
+            base={look}
+            selectedId={preset?.id}
+            onPick={(id) =>
+              onLookChange(PRESETS.find((p) => p.id === id).look, id)
+            }
+          />
+        )}
       </div>
       <div
         ref={padRef}

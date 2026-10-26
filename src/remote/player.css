@@ -13,7 +13,11 @@
   flex-direction: column;
   background: #fff;
   color: var(--ink);
-  font-family: Inter, system-ui, -apple-system, sans-serif;
+  font-family:
+    Inter,
+    system-ui,
+    -apple-system,
+    sans-serif;
   -webkit-font-smoothing: antialiased;
   overflow: hidden;
   padding-top: env(safe-area-inset-top);
@@ -83,7 +87,11 @@
   font-weight: 700;
   font-size: 15px;
   cursor: pointer;
-  transition: transform 0.12s, background 0.2s, box-shadow 0.2s, opacity 0.2s;
+  transition:
+    transform 0.12s,
+    background 0.2s,
+    box-shadow 0.2s,
+    opacity 0.2s;
 }
 .pp .btn:active {
   transform: scale(0.98);
@@ -413,7 +421,9 @@
   border: 1.5px solid var(--line);
   position: relative;
   touch-action: none;
-  transition: border-color 0.2s, background-color 0.2s;
+  transition:
+    border-color 0.2s,
+    background-color 0.2s;
   overflow: hidden;
   user-select: none;
   -webkit-user-select: none;
@@ -584,7 +594,10 @@
   align-items: center;
   gap: 4px;
   cursor: pointer;
-  transition: border-color 0.15s, background 0.15s, transform 0.12s;
+  transition:
+    border-color 0.15s,
+    background 0.15s,
+    transform 0.12s;
 }
 .pp .opt:active {
   transform: scale(0.97);
@@ -879,7 +892,7 @@
 .pp .setup-head {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
+  align-items: center;
   margin-bottom: 8px;
 }
 .pp .setup-head h4 {
@@ -889,6 +902,30 @@
   color: var(--muted);
   text-transform: uppercase;
   letter-spacing: 0.06em;
+}
+.pp .collapse-toggle {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin: -4px 0 -4px -4px;
+  padding: 4px;
+  border: 0;
+  background: none;
+  cursor: pointer;
+  border-radius: 8px;
+}
+.pp .collapse-toggle .chev {
+  width: 16px;
+  height: 16px;
+  fill: none;
+  stroke: var(--muted);
+  stroke-width: 2.4;
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  transition: transform 0.2s;
+}
+.pp .collapse-toggle .chev.open {
+  transform: rotate(90deg);
 }
 .pp .preset-status {
   font-size: 11px;
@@ -949,7 +986,10 @@
   cursor: pointer;
   text-align: left;
   overflow: hidden;
-  transition: box-shadow 0.18s, transform 0.12s, background 0.18s;
+  transition:
+    box-shadow 0.18s,
+    transform 0.12s,
+    background 0.18s;
 }
 .pp .pcard.small {
   flex-basis: 112px;
@@ -960,7 +1000,9 @@
 }
 .pp .pcard.sel {
   background: var(--accent-soft);
-  box-shadow: 0 0 0 2px var(--accent), 0 8px 18px -10px rgba(255, 106, 61, 0.6);
+  box-shadow:
+    0 0 0 2px var(--accent),
+    0 8px 18px -10px rgba(255, 106, 61, 0.6);
 }
 .pp .pc-thumb {
   position: relative;
