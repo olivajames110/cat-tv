@@ -36,6 +36,11 @@ export default function useCatSocket(hello, onMessage) {
         } catch {
           return;
         }
+        // The admin can refresh the TV (and phones) remotely.
+        if (msg.type === "reload") {
+          window.location.reload();
+          return;
+        }
         if (msg.type === "state") {
           // Turn server-relative durations into local deadlines so clock
           // skew between devices doesn't matter.

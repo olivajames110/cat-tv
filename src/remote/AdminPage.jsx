@@ -218,6 +218,28 @@ function AdminConsole({ password, onSignOut }) {
 
       <Divider sx={{ my: 2 }} />
 
+      <Typography sx={{ fontWeight: 700, mb: 1 }}>Refresh screens</Typography>
+      <Typography variant="body2" sx={{ opacity: 0.7, mb: 1.5 }}>
+        Reloads the page, e.g. to pick up a new version. Phones keep their place
+        in line.
+      </Typography>
+      <Box sx={{ display: "flex", gap: 1, flexWrap: "wrap" }}>
+        <Button
+          variant="outlined"
+          onClick={() => send({ type: "reload", target: "display" })}
+        >
+          Refresh TV
+        </Button>
+        <Button
+          variant="outlined"
+          onClick={() => send({ type: "reload", target: "all" })}
+        >
+          Refresh TV and phones
+        </Button>
+      </Box>
+
+      <Divider sx={{ my: 2 }} />
+
       <Box sx={{ display: "flex", alignItems: "center", mb: 1 }}>
         <Typography sx={{ fontWeight: 700, flex: 1 }}>
           Line ({state.queue.length})

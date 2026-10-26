@@ -2,7 +2,8 @@
 //
 //   display (the TV, "/")        ← receives queue state + move deltas
 //   player  (a phone, "/play")   → joins the queue, sends move deltas on its turn
-//   admin   ("/admin")           → sets max session length, skips / kicks players
+//   admin   ("/admin")           → sets max session length, skips / kicks players,
+//                                  refreshes screens
 
 import http from "node:http";
 import fs from "node:fs";
@@ -11,7 +12,11 @@ import path from "node:path";
 import crypto from "node:crypto";
 import { fileURLToPath } from "node:url";
 import { WebSocketServer } from "ws";
-import { DEFAULT_LOOK, sanitizeLookPatch } from "../src/shared/look.js";
+import {
+  DEFAULT_LOOK,
+  PRESETS,
+  sanitizeLookPatch,
+} from "../src/shared/look.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DIST_DIR = path.resolve(__dirname, "../dist");
@@ -29,7 +34,7 @@ const TOKEN_ROTATE_MS = 60_000;
 const ACTIVE_GRACE_MS = 10_000; // active player may drop this long before losing the turn
 const QUEUED_GRACE_MS = 30_000; // queued player may drop this long before losing their spot
 const MAX_NAME_LEN = 20;
-const EXTEND_MS = 60_000; // "+1 min" on the phone, allowed while nobody is waiting
+const EXTEND_MS = 30_000; // "+30s" on the phone, allowed while nobody is waiting
 const MAX_EXTEND_MS = 3 * 60_000; // most extra time one turn can get
 
 // ─── Settings ────────────────────────────────────────────────────────────────
@@ -78,7 +83,7 @@ const isValidToken = (t) => t && (t === joinToken || t === prevJoinToken);
 // queue[0] is the active player once `active` is set.
 // Entry: { clientId, name, disconnectedAt }
 let queue = [];
-let active = null; // { clientId, endsAt, extendedMs }
+let active = null; // { clientId, startedAt, endsAt, extendedMs }
 let playerCount = 0;
 
 const sockets = new Set(); // every connected ws, tagged with ws.role / ws.clientId
@@ -98,12 +103,15 @@ function removeFromQueue(clientId, reason) {
 function advance() {
   if (active || queue.length === 0) return;
   const next = queue[0];
+  const now = Date.now();
   active = {
     clientId: next.clientId,
-    endsAt: Date.now() + settings.maxSessionSeconds * 1000,
+    startedAt: now,
+    endsAt: now + settings.maxSessionSeconds * 1000,
     extendedMs: 0,
   };
   sendToPlayer(next.clientId, { type: "yourTurn" });
+  sendToDisplays({ type: "event", kind: "turn", name: next.name });
 }
 
 // One tick drives session expiry and drops players whose phones went away.
@@ -146,12 +154,17 @@ function lanHost() {
 
 function publicState() {
   const activeEntry = active && findEntry(active.clientId);
+  const waiting = queue.slice(active ? 1 : 0);
   return {
     active: activeEntry
-      ? { name: activeEntry.name, remainingMs: active.endsAt - Date.now() }
+      ? {
+          name: activeEntry.name,
+          remainingMs: active.endsAt - Date.now(),
+          totalMs: active.endsAt - active.startedAt,
+        }
       : null,
-    queueLength: queue.length - (active ? 1 : 0),
-    upNext: queue.slice(active ? 1 : 0, active ? 4 : 3).map((e) => e.name),
+    queueLength: waiting.length,
+    waiting: waiting.slice(0, 20).map((e) => e.name),
     maxSessionSeconds: settings.maxSessionSeconds,
     qrSizePercent: settings.qrSizePercent,
     look: settings.look,
@@ -178,7 +191,8 @@ function stateFor(ws) {
               name: queue[idx].name,
               position: isActive ? 0 : idx + (active ? 0 : 1),
               remainingMs: isActive ? active.endsAt - Date.now() : null,
-              canExtend: isActive && active.extendedMs < MAX_EXTEND_MS,
+              totalMs: isActive ? active.endsAt - active.startedAt : null,
+              extendLeftMs: isActive ? MAX_EXTEND_MS - active.extendedMs : null,
             },
     };
   }
@@ -231,6 +245,7 @@ const finite = (n) => typeof n === "number" && Number.isFinite(n);
 const clamp = (n, lo, hi) => Math.max(lo, Math.min(hi, n));
 
 // The TV's own panel and the active phone may both change the look.
+// A phone picking a preset also names it, so the TV can announce it.
 function handleLook(ws, msg) {
   const canEdit =
     ws.role === "display" ||
@@ -240,6 +255,15 @@ function handleLook(ws, msg) {
   settings.look = { ...settings.look, ...patch };
   scheduleSave();
   broadcastState();
+  const preset = PRESETS.find((p) => p.id === msg.preset);
+  if (preset && ws.role === "player") {
+    sendToDisplays({
+      type: "event",
+      kind: "preset",
+      name: findEntry(ws.clientId)?.name,
+      preset: preset.name,
+    });
+  }
 }
 
 // Slider drags send many looks a second; write the file at most once a second.
@@ -302,6 +326,7 @@ function handleMessage(ws, msg) {
             .trim()
             .slice(0, MAX_NAME_LEN) || `Player ${playerCount}`;
         queue.push({ clientId: ws.clientId, name, disconnectedAt: null });
+        sendToDisplays({ type: "event", kind: "joined", name });
         advance();
         broadcastState();
         return;
@@ -314,6 +339,11 @@ function handleMessage(ws, msg) {
         active.endsAt += EXTEND_MS;
         active.extendedMs += EXTEND_MS;
         broadcastState();
+        sendToDisplays({
+          type: "event",
+          kind: "extended",
+          name: findEntry(ws.clientId)?.name,
+        });
         return;
       case "leave":
         removeFromQueue(ws.clientId, "left");
@@ -369,6 +399,15 @@ function handleMessage(ws, msg) {
         for (const e of [...queue]) removeFromQueue(e.clientId, "kicked");
         broadcastState();
         return;
+      case "reload": {
+        // "display" refreshes the TV only; "all" also refreshes every phone.
+        const roles =
+          msg.target === "all" ? ["display", "player"] : ["display"];
+        for (const s of sockets) {
+          if (roles.includes(s.role)) send(s, { type: "reload" });
+        }
+        return;
+      }
     }
   }
 }

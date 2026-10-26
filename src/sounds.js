@@ -32,9 +32,14 @@ function tone(c, out, { type = "sine", t, dur, freqs, peak = 1 }) {
   const g = c.createGain();
   osc.type = type;
   osc.frequency.setValueAtTime(freqs[0], t);
-  freqs.slice(1).forEach((f, i) =>
-    osc.frequency.linearRampToValueAtTime(f, t + (dur * (i + 1)) / (freqs.length - 1))
-  );
+  freqs
+    .slice(1)
+    .forEach((f, i) =>
+      osc.frequency.linearRampToValueAtTime(
+        f,
+        t + (dur * (i + 1)) / (freqs.length - 1)
+      )
+    );
   g.gain.setValueAtTime(0.0001, t);
   g.gain.exponentialRampToValueAtTime(peak, t + Math.min(0.01, dur / 4));
   g.gain.exponentialRampToValueAtTime(0.0001, t + dur);
@@ -75,6 +80,16 @@ const RECIPES = {
         freqs: [rand(5200, 6200), rand(2600, 3200)],
         peak: 0.4,
       });
+    }
+  },
+
+  // Quick warble between two notes, like a trilling bird.
+  trill(c, out, t) {
+    const lo = rand(3000, 3400);
+    const n = Math.floor(rand(8, 13));
+    for (let i = 0; i < n; i++) {
+      const f = i % 2 ? lo * 1.26 : lo;
+      tone(c, out, { t: t + i * 0.045, dur: 0.04, freqs: [f, f], peak: 0.35 });
     }
   },
 

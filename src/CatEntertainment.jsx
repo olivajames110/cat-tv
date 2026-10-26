@@ -5,15 +5,12 @@ import {
   useCallback,
   useSyncExternalStore,
 } from "react";
-import QRCode from "qrcode";
 import Logo from "./assets/logo.png";
-import useCatSocket, {
-  fmtSeconds,
-  useCountdown,
-} from "./remote/useCatSocket.js";
+import useCatSocket from "./remote/useCatSocket.js";
 import useSharedLook from "./remote/useSharedLook.js";
 import LookControls, { Slider } from "./LookControls.jsx";
-import { BACKGROUNDS, CURSORS } from "./shared/look.js";
+import TvOverlay from "./TvOverlay.jsx";
+import { BACKGROUNDS, CURSORS, SOUNDS, STRING_COLORS } from "./shared/look.js";
 import { sceneStyle } from "./scenes.js";
 import {
   audioRunning,
@@ -44,7 +41,6 @@ import {
 
 const SEG_COUNT = 30;
 const GRAVITY = 0.42;
-const DAMPING = 0.984;
 const ITERATIONS = 14;
 const FLOOR_FRICTION = 0.55;
 
@@ -57,7 +53,10 @@ function makeRope(x, y, segLen) {
   }));
 }
 
-function stepRope(nodes, hx, hy, segLen) {
+// Bounciness 0–100 maps to how much swing the string keeps each frame.
+const dampingFor = (bounciness) => 0.95 + (bounciness / 100) * 0.046;
+
+function stepRope(nodes, hx, hy, segLen, damping) {
   const FLOOR = window.innerHeight - 4;
   const n = nodes.map((nd) => ({ ...nd }));
 
@@ -67,8 +66,8 @@ function stepRope(nodes, hx, hy, segLen) {
   n[0].py = hy;
 
   for (let i = 1; i < n.length; i++) {
-    let vx = (n[i].x - n[i].px) * DAMPING;
-    let vy = (n[i].y - n[i].py) * DAMPING;
+    let vx = (n[i].x - n[i].px) * damping;
+    let vy = (n[i].y - n[i].py) * damping;
     n[i].px = n[i].x;
     n[i].py = n[i].y;
     n[i].x += vx;
@@ -119,7 +118,7 @@ function ropeToPath(nodes) {
 
 // ─── Rope Renderer ────────────────────────────────────────────────────────────
 
-function RopeTrail({ nodes, strokeWidth, isLaser }) {
+function RopeTrail({ nodes, strokeWidth, isLaser, color }) {
   if (nodes.length < 2) return null;
   const path = ropeToPath(nodes);
   const tail = nodes[nodes.length - 1];
@@ -200,7 +199,7 @@ function RopeTrail({ nodes, strokeWidth, isLaser }) {
           <path
             d={path}
             fill="none"
-            stroke="#c8961a"
+            stroke={color.edge}
             strokeWidth={sw + 1}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -208,7 +207,7 @@ function RopeTrail({ nodes, strokeWidth, isLaser }) {
           <path
             d={path}
             fill="none"
-            stroke="#f5c842"
+            stroke={color.main}
             strokeWidth={sw}
             strokeLinecap="round"
             strokeLinejoin="round"
@@ -221,8 +220,8 @@ function RopeTrail({ nodes, strokeWidth, isLaser }) {
             strokeLinecap="round"
             strokeLinejoin="round"
           />
-          <circle cx={tail.x} cy={tail.y} r={sw * 2} fill="#c8961a" />
-          <circle cx={tail.x} cy={tail.y} r={sw * 1.5} fill="#f5c842" />
+          <circle cx={tail.x} cy={tail.y} r={sw * 2} fill={color.edge} />
+          <circle cx={tail.x} cy={tail.y} r={sw * 1.5} fill={color.main} />
           <circle
             cx={tail.x - sw * 0.4}
             cy={tail.y - sw * 0.4}
@@ -237,10 +236,14 @@ function RopeTrail({ nodes, strokeWidth, isLaser }) {
 
 // ─── Shared rope physics hook ─────────────────────────────────────────────────
 
-function useRopePhysics(headPos, segLen) {
+function useRopePhysics(headPos, segLen, damping) {
   const ropeRef = useRef(null);
   const headRef = useRef(headPos);
   const segLenRef = useRef(segLen);
+  const dampingRef = useRef(damping);
+  useEffect(() => {
+    dampingRef.current = damping;
+  }, [damping]);
   const [nodes, setNodes] = useState([]);
 
   useEffect(() => {
@@ -273,7 +276,8 @@ function useRopePhysics(headPos, segLen) {
           ropeRef.current,
           h.x,
           h.y,
-          segLenRef.current
+          segLenRef.current,
+          dampingRef.current
         );
         setNodes([...ropeRef.current]);
       }
@@ -288,16 +292,14 @@ function useRopePhysics(headPos, segLen) {
 
 // ─── Toy View (sprite + string) ───────────────────────────────────────────────
 
-function ToyView({
-  pos,
-  cursorObj,
-  toySize,
-  trailWidth,
-  trailLength,
-  showString,
-}) {
+// `ping` ({ n, label }) changes each time a sound plays; rings expand from the toy.
+function ToyView({ pos, look, ping }) {
+  const { toySize, trailWidth, trailLength, showString } = look;
+  const cursorObj = CURSORS.find((c) => c.id === look.cursorId) ?? CURSORS[0];
+  const color =
+    STRING_COLORS.find((c) => c.id === look.stringColor) ?? STRING_COLORS[1];
   const segLen = 4 + trailLength * 0.22;
-  const nodes = useRopePhysics(pos, segLen);
+  const nodes = useRopePhysics(pos, segLen, dampingFor(look.bounciness));
   const isLaser = cursorObj.isLaser;
   const fontSize = Math.round(cursorObj.baseSize * (toySize / 36));
   const sw = Math.max(1, trailWidth / 8);
@@ -305,7 +307,23 @@ function ToyView({
   return (
     <>
       {showString && (
-        <RopeTrail nodes={nodes} strokeWidth={sw} isLaser={isLaser} />
+        <RopeTrail
+          nodes={nodes}
+          strokeWidth={sw}
+          isLaser={isLaser}
+          color={color}
+        />
+      )}
+      {ping && (
+        <div
+          key={ping.n}
+          className="sound-ping"
+          style={{ left: pos.x, top: pos.y }}
+        >
+          <i />
+          <i />
+          <b>{ping.label}</b>
+        </div>
       )}
       <div
         style={{
@@ -334,14 +352,7 @@ function ToyView({
 // While `frozen` (the control panel is open), or while the pointer is over any
 // on-screen UI (.cat-panel / .cat-ui), the toy stays put and the mouse moves
 // on its own.
-function ManualToy({
-  cursorObj,
-  toySize,
-  trailWidth,
-  trailLength,
-  showString,
-  frozen,
-}) {
+function ManualToy({ look, ping, frozen }) {
   const [pos, setPos] = useState({ x: -400, y: -400 });
   const frozenRef = useRef(frozen);
   useEffect(() => {
@@ -376,28 +387,12 @@ function ManualToy({
     };
   }, []);
 
-  return (
-    <ToyView
-      pos={pos}
-      cursorObj={cursorObj}
-      toySize={toySize}
-      trailWidth={trailWidth}
-      trailLength={trailLength}
-      showString={showString}
-    />
-  );
+  return <ToyView pos={pos} look={look} ping={ping} />;
 }
 
 // ─── Auto Toy ─────────────────────────────────────────────────────────────────
 
-function AutoToy({
-  cursorObj,
-  toySize,
-  trailWidth,
-  trailLength,
-  autoSpeed,
-  showString,
-}) {
+function AutoToy({ look, ping, autoSpeed }) {
   const velRef = useRef({ vx: 3, vy: 2 });
   const posRef = useRef({ x: 400, y: 300 });
   const targetRef = useRef({ x: 500, y: 300 });
@@ -452,16 +447,7 @@ function AutoToy({
     return () => cancelAnimationFrame(raf);
   }, []);
 
-  return (
-    <ToyView
-      pos={pos}
-      cursorObj={cursorObj}
-      toySize={toySize}
-      trailWidth={trailWidth}
-      trailLength={trailLength}
-      showString={showString}
-    />
-  );
+  return <ToyView pos={pos} look={look} ping={ping} />;
 }
 
 // ─── Remote Toy (driven from a phone) ─────────────────────────────────────────
@@ -469,14 +455,7 @@ function AutoToy({
 // A swipe across the full width of the phone moves the toy this many TV widths.
 const REMOTE_GAIN = 1.2;
 
-function RemoteToy({
-  deltaRef,
-  cursorObj,
-  toySize,
-  trailWidth,
-  trailLength,
-  showString,
-}) {
+function RemoteToy({ deltaRef, look, ping }) {
   const [pos, setPos] = useState(() => ({
     x: window.innerWidth / 2,
     y: window.innerHeight / 2,
@@ -507,112 +486,7 @@ function RemoteToy({
     return () => cancelAnimationFrame(raf);
   }, [deltaRef]);
 
-  return (
-    <ToyView
-      pos={pos}
-      cursorObj={cursorObj}
-      toySize={toySize}
-      trailWidth={trailWidth}
-      trailLength={trailLength}
-      showString={showString}
-    />
-  );
-}
-
-// ─── Join QR panel ────────────────────────────────────────────────────────────
-
-function joinUrlFor(state) {
-  const base = state.publicUrl
-    ? new URL(state.publicUrl)
-    : new URL(window.location.origin);
-  // "localhost" on the TV means nothing to a phone; swap in the LAN address.
-  if (
-    !state.publicUrl &&
-    state.lanHost &&
-    ["localhost", "127.0.0.1", "::1"].includes(base.hostname)
-  ) {
-    base.hostname = state.lanHost;
-  }
-  base.pathname = "/play";
-  base.search = `?t=${state.joinToken}`;
-  return base.toString();
-}
-
-function JoinPanel({ state }) {
-  const joinUrl = state?.joinToken ? joinUrlFor(state) : null;
-  const [qr, setQr] = useState(null);
-  const secondsLeft = useCountdown(state?.active?.endsAt);
-
-  useEffect(() => {
-    if (!joinUrl) return;
-    let cancelled = false;
-    QRCode.toDataURL(joinUrl, { margin: 1, width: 360 }).then((url) => {
-      if (!cancelled) setQr(url);
-    });
-    return () => {
-      cancelled = true;
-    };
-  }, [joinUrl]);
-
-  if (!joinUrl || !qr) return null;
-
-  // The admin can shrink the panel to 25%; below 60% only the code is shown.
-  const scale = (state.qrSizePercent ?? 100) / 100;
-  const compact = scale < 0.6;
-
-  return (
-    <Paper
-      elevation={8}
-      className="cat-ui"
-      sx={{
-        position: "fixed",
-        left: 20,
-        bottom: 20,
-        p: compact ? 0.5 : 1.5,
-        width: 200 * scale,
-        boxSizing: "border-box",
-        background: "rgba(0,0,0,0.58)",
-        backdropFilter: "blur(20px)",
-        borderRadius: 3,
-        border: "1px solid rgba(255,255,255,0.15)",
-        color: "white",
-        zIndex: 10000,
-        textAlign: "center",
-      }}
-    >
-      <img
-        src={qr}
-        alt="Scan to play"
-        style={{
-          width: "100%",
-          borderRadius: compact ? 4 : 8,
-          display: "block",
-        }}
-      />
-      {!compact && (
-        <>
-          <Typography sx={{ fontWeight: 700, mt: 1, color: "white" }}>
-            📱 Scan to play!
-          </Typography>
-          {state.active ? (
-            <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
-              {state.active.name} is playing · {fmtSeconds(secondsLeft)}
-            </Typography>
-          ) : (
-            <Typography sx={{ fontSize: 13, color: "white", opacity: 0.85 }}>
-              Nobody's playing — you're next!
-            </Typography>
-          )}
-          {state.queueLength > 0 && (
-            <Typography sx={{ fontSize: 12, color: "white", opacity: 0.6 }}>
-              {state.queueLength} in line
-              {state.upNext.length > 0 && `: ${state.upNext.join(", ")}`}
-            </Typography>
-          )}
-        </>
-      )}
-    </Paper>
-  );
+  return <ToyView pos={pos} look={look} ping={ping} />;
 }
 
 // ─── BG Decorations ───────────────────────────────────────────────────────────
@@ -672,6 +546,31 @@ export default function CatEntertainmentApp() {
   // The look (scene, cursor, sizes) is shared with the active phone.
   const remoteDeltaRef = useRef({ dx: 0, dy: 0 });
   const { look, editLook, onState: onLookState } = useSharedLook();
+
+  // Short messages at the bottom of the TV so the room can follow along.
+  const [toast, setToast] = useState(null);
+  const toastTimerRef = useRef(null);
+  const showToast = (text) => {
+    setToast({ text, show: true });
+    clearTimeout(toastTimerRef.current);
+    toastTimerRef.current = setTimeout(
+      () => setToast((t) => ({ ...t, show: false })),
+      2500
+    );
+  };
+
+  // Plays a sound and shows rings around the toy with its name.
+  const [ping, setPing] = useState(null);
+  const playWithPing = (id, vol) => {
+    if (id === "none") return;
+    playSound(id, vol);
+    const label = SOUNDS.find((x) => x.id === id)?.label ?? "";
+    setPing((p) => ({
+      n: (p?.n ?? 0) + 1,
+      label: `${label.slice(label.indexOf(" ") + 1).toLowerCase()}!`,
+    }));
+  };
+
   const { state: remoteState, send } = useCatSocket(
     { role: "display" },
     (msg) => {
@@ -681,7 +580,15 @@ export default function CatEntertainmentApp() {
       } else if (msg.type === "state") {
         onLookState(msg);
       } else if (msg.type === "sound") {
-        playSound(look.soundId, look.volume);
+        playWithPing(look.soundId, look.volume);
+      } else if (msg.type === "event") {
+        const text = {
+          joined: `${msg.name} joined the line 👋`,
+          turn: `${msg.name}'s turn — go get it! 🐾`,
+          extended: `${msg.name} added more time ⏱️`,
+          preset: `${msg.name} switched to ${msg.preset}`,
+        }[msg.kind];
+        if (text) showToast(text);
       }
     }
   );
@@ -691,9 +598,8 @@ export default function CatEntertainmentApp() {
   };
   const remoteActive = !!remoteState?.active;
 
-  const { bgId, toySize, trailWidth, trailLength, showString } = look;
+  const { bgId } = look;
   const bg = BACKGROUNDS.find((b) => b.id === bgId) ?? BACKGROUNDS[0];
-  const cursorObj = CURSORS.find((c) => c.id === look.cursorId) ?? CURSORS[0];
 
   // ── Sound ─────────────────────────────────────────────────────────────────
   // Browsers block audio until the page is clicked once; any click unlocks it.
@@ -719,13 +625,17 @@ export default function CatEntertainmentApp() {
   }, [soundId]);
 
   // Auto play: one burst every few seconds.
+  const playWithPingRef = useRef(playWithPing);
+  useEffect(() => {
+    playWithPingRef.current = playWithPing;
+  });
   useEffect(() => {
     if (soundMode !== "auto" || soundId === "none") return;
     let timer;
     const schedule = () => {
       timer = setTimeout(
         () => {
-          playSound(soundId, volumeRef.current);
+          playWithPingRef.current(soundId, volumeRef.current);
           schedule();
         },
         2500 + Math.random() * 4500
@@ -791,38 +701,14 @@ export default function CatEntertainmentApp() {
       <BgDecorations bgId={bgId} />
 
       {remoteActive ? (
-        <RemoteToy
-          key="r"
-          deltaRef={remoteDeltaRef}
-          cursorObj={cursorObj}
-          toySize={toySize}
-          trailWidth={trailWidth}
-          trailLength={trailLength}
-          showString={showString}
-        />
+        <RemoteToy key="r" deltaRef={remoteDeltaRef} look={look} ping={ping} />
       ) : mode === "manual" ? (
-        <ManualToy
-          key="m"
-          frozen={showPanel}
-          cursorObj={cursorObj}
-          toySize={toySize}
-          trailWidth={trailWidth}
-          trailLength={trailLength}
-          showString={showString}
-        />
+        <ManualToy key="m" frozen={showPanel} look={look} ping={ping} />
       ) : (
-        <AutoToy
-          key="a"
-          cursorObj={cursorObj}
-          toySize={toySize}
-          trailWidth={trailWidth}
-          trailLength={trailLength}
-          autoSpeed={autoSpeed}
-          showString={showString}
-        />
+        <AutoToy key="a" look={look} ping={ping} autoSpeed={autoSpeed} />
       )}
 
-      <JoinPanel state={remoteState} />
+      <TvOverlay state={remoteState} toast={toast} />
 
       {/* ── Control Panel ── */}
       {showPanel && (
@@ -984,7 +870,7 @@ export default function CatEntertainmentApp() {
           <Box sx={{ p: 1.75 }}>
             <LookControls
               tab={panelTab}
-              onPlaySound={() => playSound(soundId, volume)}
+              onPlaySound={() => playWithPing(soundId, volume)}
               look={look}
               onChange={updateLook}
               tuneExtra={
@@ -1024,8 +910,7 @@ export default function CatEntertainmentApp() {
         sx={{
           position: "fixed",
           bottom: 20,
-          left: "50%",
-          transform: "translateX(-50%)",
+          left: 20,
           display: "flex",
           alignItems: "center",
           gap: 1,

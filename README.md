@@ -8,7 +8,7 @@ the toy.
 | -------- | -------------------------------- |
 | `/`      | The TV. Shows the toy and the join QR code. |
 | `/play`  | Phones, via the QR code. Join the line, then drag to move the toy, pick the scene, toy, tuning and sound, and add a minute when nobody is waiting. |
-| `/admin` | The admin. Sets the max session length, skips or removes players. |
+| `/admin` | The admin. Sets the max session length and QR size, skips or removes players, refreshes the TV and phones. |
 
 ## Running
 
@@ -54,7 +54,9 @@ The admin's session length is saved to `data/settings.json`.
   them — the phone has to scan the QR code again to get back in line.
 - A player who closes the page keeps their place for 30 s in line, or 10 s if it's
   their turn.
-- While nobody is playing, the TV falls back to its own Manual / Auto mode.
+- While nobody is waiting, the player can add 30 s at a time, up to 3 minutes extra.
+- Players waiting in line can pick a preset (toy, sound, scene and string together); it applies when their turn starts.
+- While nobody is playing, the TV shows an invitation and falls back to its own Manual / Auto mode.
 
 ## Scenes
 
