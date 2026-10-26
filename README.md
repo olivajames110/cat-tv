@@ -56,7 +56,7 @@ The admin's session length is saved to `data/settings.json`.
   their turn.
 - While nobody is waiting, the player can add 30 s at a time, up to 3 minutes extra.
 - Players waiting in line can pick a preset (toy, sound, scene and string together); it applies when their turn starts.
-- While nobody is playing, the TV shows an invitation and falls back to its own Manual / Auto mode.
+- While nobody is playing, the TV shows an invitation and the toy roams on its own. The mouse on the TV does nothing.
 
 ## Scenes
 

@@ -5,10 +5,8 @@ import {
   useCallback,
   useSyncExternalStore,
 } from "react";
-import Logo from "./assets/logo.png";
 import useCatSocket from "./remote/useCatSocket.js";
 import useSharedLook from "./remote/useSharedLook.js";
-import LookControls, { Slider } from "./LookControls.jsx";
 import TvOverlay from "./TvOverlay.jsx";
 import { BACKGROUNDS, CURSORS, SOUNDS, STRING_COLORS } from "./shared/look.js";
 import { sceneStyle } from "./scenes.js";
@@ -18,24 +16,7 @@ import {
   subscribeAudioState,
   unlockAudio,
 } from "./sounds.js";
-import {
-  Box,
-  Typography,
-  Button,
-  ButtonGroup,
-  Tabs,
-  Tab,
-  Paper,
-  IconButton,
-  Divider,
-} from "@mui/material";
-import VisibilityOffIcon from "@mui/icons-material/VisibilityOff";
-import VisibilityIcon from "@mui/icons-material/Visibility";
-import {
-  AdsClickOutlined,
-  CloseRounded,
-  SmartToyOutlined,
-} from "@mui/icons-material";
+import { Box, Button } from "@mui/material";
 
 // ─── Rope Physics (Verlet) ────────────────────────────────────────────────────
 
@@ -347,49 +328,6 @@ function ToyView({ pos, look, ping }) {
   );
 }
 
-// ─── Manual Toy ───────────────────────────────────────────────────────────────
-
-// While `frozen` (the control panel is open), or while the pointer is over any
-// on-screen UI (.cat-panel / .cat-ui), the toy stays put and the mouse moves
-// on its own.
-function ManualToy({ look, ping, frozen }) {
-  const [pos, setPos] = useState({ x: -400, y: -400 });
-  const frozenRef = useRef(frozen);
-  useEffect(() => {
-    frozenRef.current = frozen;
-  }, [frozen]);
-
-  useEffect(() => {
-    const ignore = (e) =>
-      frozenRef.current || e.target?.closest?.(".cat-panel, .cat-ui");
-    const onMove = (e) => {
-      if (ignore(e)) return;
-      const x = e.clientX ?? e.touches?.[0]?.clientX;
-      const y = e.clientY ?? e.touches?.[0]?.clientY;
-      if (x !== undefined) setPos({ x, y });
-    };
-    const onLeave = () => {
-      if (!frozenRef.current) setPos({ x: -400, y: -400 });
-    };
-    const onEnter = (e) => {
-      if (!ignore(e)) setPos({ x: e.clientX, y: e.clientY });
-    };
-
-    window.addEventListener("mousemove", onMove);
-    window.addEventListener("touchmove", onMove, { passive: true });
-    document.addEventListener("mouseleave", onLeave);
-    document.addEventListener("mouseenter", onEnter);
-    return () => {
-      window.removeEventListener("mousemove", onMove);
-      window.removeEventListener("touchmove", onMove);
-      document.removeEventListener("mouseleave", onLeave);
-      document.removeEventListener("mouseenter", onEnter);
-    };
-  }, []);
-
-  return <ToyView pos={pos} look={look} ping={ping} />;
-}
-
 // ─── Auto Toy ─────────────────────────────────────────────────────────────────
 
 function AutoToy({ look, ping, autoSpeed }) {
@@ -536,16 +474,15 @@ function BgDecorations({ bgId }) {
 
 // ─── Main App ─────────────────────────────────────────────────────────────────
 
-export default function CatEntertainmentApp() {
-  const [mode, setMode] = useState("manual");
-  const [showPanel, setShowPanel] = useState(false);
-  const [panelTab, setPanelTab] = useState("tune");
-  const [autoSpeed, setAutoSpeed] = useState(40);
+// The TV only shows the toy: a phone drives it during a turn, otherwise it
+// roams on its own. The mouse doesn't control anything.
+const AUTO_SPEED = 40;
 
+export default function CatEntertainmentApp() {
   // ── Phone remote: move deltas accumulate here until RemoteToy consumes them.
   // The look (scene, cursor, sizes) is shared with the active phone.
   const remoteDeltaRef = useRef({ dx: 0, dy: 0 });
-  const { look, editLook, onState: onLookState } = useSharedLook();
+  const { look, onState: onLookState } = useSharedLook();
 
   // Short messages at the bottom of the TV so the room can follow along.
   const [toast, setToast] = useState(null);
@@ -571,31 +508,24 @@ export default function CatEntertainmentApp() {
     }));
   };
 
-  const { state: remoteState, send } = useCatSocket(
-    { role: "display" },
-    (msg) => {
-      if (msg.type === "move") {
-        remoteDeltaRef.current.dx += msg.dx;
-        remoteDeltaRef.current.dy += msg.dy;
-      } else if (msg.type === "state") {
-        onLookState(msg);
-      } else if (msg.type === "sound") {
-        playWithPing(look.soundId, look.volume);
-      } else if (msg.type === "event") {
-        const text = {
-          joined: `${msg.name} joined the line 👋`,
-          turn: `${msg.name}'s turn — go get it! 🐾`,
-          extended: `${msg.name} added more time ⏱️`,
-          preset: `${msg.name} switched to ${msg.preset}`,
-        }[msg.kind];
-        if (text) showToast(text);
-      }
+  const { state: remoteState } = useCatSocket({ role: "display" }, (msg) => {
+    if (msg.type === "move") {
+      remoteDeltaRef.current.dx += msg.dx;
+      remoteDeltaRef.current.dy += msg.dy;
+    } else if (msg.type === "state") {
+      onLookState(msg);
+    } else if (msg.type === "sound") {
+      playWithPing(look.soundId, look.volume);
+    } else if (msg.type === "event") {
+      const text = {
+        joined: `${msg.name} joined the line 👋`,
+        turn: `${msg.name}'s turn — go get it! 🐾`,
+        extended: `${msg.name} added more time ⏱️`,
+        preset: `${msg.name} switched to ${msg.preset}`,
+      }[msg.kind];
+      if (text) showToast(text);
     }
-  );
-  const updateLook = (patch) => {
-    editLook(patch);
-    send({ type: "look", patch });
-  };
+  });
   const remoteActive = !!remoteState?.active;
 
   const { bgId } = look;
@@ -646,14 +576,9 @@ export default function CatEntertainmentApp() {
   }, [soundId, soundMode]);
 
   // ── Prevent mobile scroll/bounce ──────────────────────────────────────────
-  // Only block touchmove on the game background — NOT touchstart.
-  // Blocking touchstart breaks all button taps. Blocking touchmove on non-panel
-  // elements is enough to stop the page/background from scrolling or bouncing.
+  // Only block touchmove — blocking touchstart would break button taps.
   useEffect(() => {
-    const preventMove = (e) => {
-      if (e.target.closest(".cat-panel")) return; // let panel scroll freely
-      e.preventDefault();
-    };
+    const preventMove = (e) => e.preventDefault();
     document.addEventListener("touchmove", preventMove, { passive: false });
     return () => document.removeEventListener("touchmove", preventMove);
   }, []);
@@ -667,7 +592,6 @@ export default function CatEntertainmentApp() {
         position: "fixed",
         inset: 0,
         overflow: "hidden",
-        cursor: !showPanel && mode === "manual" ? "none" : "default",
         fontFamily: "'Trebuchet MS', sans-serif",
         touchAction: "none",
       }}
@@ -677,10 +601,6 @@ export default function CatEntertainmentApp() {
           0%   { transform:translateY(-20px) rotate(0deg); }
           100% { transform:translateY(110vh) rotate(360deg); }
         }
-        @keyframes panelSlide {
-          from { opacity:0; transform:translateY(16px); }
-          to   { opacity:1; transform:translateY(0); }
-        }
         html, body {
           overflow: hidden;
           overscroll-behavior: none;
@@ -688,279 +608,27 @@ export default function CatEntertainmentApp() {
           width: 100%;
           height: 100%;
         }
-        /* Panel and all its children get normal touch-action so taps work */
-        .cat-panel, .cat-panel * {
-          touch-action: auto;
-        }
-        /* The page hides the mouse in Manual mode; show it again over UI */
-        .cat-ui {
-          cursor: default;
-        }
       `}</style>
 
       <BgDecorations bgId={bgId} />
 
       {remoteActive ? (
         <RemoteToy key="r" deltaRef={remoteDeltaRef} look={look} ping={ping} />
-      ) : mode === "manual" ? (
-        <ManualToy key="m" frozen={showPanel} look={look} ping={ping} />
       ) : (
-        <AutoToy key="a" look={look} ping={ping} autoSpeed={autoSpeed} />
+        <AutoToy key="a" look={look} ping={ping} autoSpeed={AUTO_SPEED} />
       )}
 
       <TvOverlay state={remoteState} toast={toast} />
 
-      {/* ── Control Panel ── */}
-      {showPanel && (
-        <Paper
-          elevation={8}
-          className="cat-panel"
-          sx={{
-            position: "fixed",
-            top: 20,
-            right: 20,
-            width: { xs: "calc(100vw - 40px)", sm: "max-content" },
-            maxHeight: "calc(100vh - 100px)",
-            overflowY: "auto",
-            touchAction: "pan-y", // allow vertical scroll inside panel
-            background: "rgba(0,0,0,0.58)",
-            backdropFilter: "blur(20px)",
-            borderRadius: 3,
-            border: "1px solid rgba(255,255,255,0.15)",
-            color: "white",
-            zIndex: 10000,
-            animation: "panelSlide 0.3s ease",
-            overflow: "hidden",
-          }}
-        >
-          {/* Header */}
-          <Box
-            sx={{
-              p: "14px 16px 10px",
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-            }}
-          >
-            <Box
-              sx={{
-                display: "flex",
-                flexDirection: { xs: "column", sm: "row" },
-                alignItems: { xs: "center", sm: "center" },
-                gap: 1.5,
-                textAlign: { xs: "center", sm: "left" },
-              }}
-            >
-              <img src={Logo} alt="Cat TV" style={{ width: 81, height: 81 }} />
-
-              <IconButton
-                sx={{
-                  color: "#ffffff",
-                  position: "absolute",
-                  top: 0,
-                  right: 0,
-                }}
-                onClick={() => setShowPanel((p) => !p)}
-              >
-                <CloseRounded />
-              </IconButton>
-
-              <Box
-                sx={{
-                  display: "flex",
-                  flexDirection: "column",
-                  gap: 0.5,
-                  flex: 1,
-                  alignItems: { xs: "center", sm: "flex-start" },
-                }}
-              >
-                <Typography
-                  sx={{ fontWeight: 700, fontSize: 20, color: "white" }}
-                >
-                  Catpurrccino's Interactive
-                </Typography>
-
-                <ButtonGroup size="small" variant="outlined">
-                  <Button
-                    size="medium"
-                    startIcon={<AdsClickOutlined />}
-                    onClick={() => setMode("manual")}
-                    sx={{
-                      color: "white",
-                      py: 1,
-                      px: 2.5,
-                      borderColor: "rgba(255,255,255,0.3)",
-                      background:
-                        mode === "manual"
-                          ? "rgba(255,255,255,0.3)"
-                          : "rgba(255,255,255,0.1)",
-                      textTransform: "none",
-                      "&:hover": {
-                        background: "rgba(255,255,255,0.25)",
-                        borderColor: "rgba(255,255,255,0.5)",
-                      },
-                    }}
-                  >
-                    Manual Mode
-                  </Button>
-                  <Button
-                    size="medium"
-                    startIcon={<SmartToyOutlined />}
-                    onClick={() => setMode("auto")}
-                    sx={{
-                      color: "white",
-                      py: 1,
-                      px: 2.5,
-                      borderColor: "rgba(255,255,255,0.3)",
-                      background:
-                        mode === "auto"
-                          ? "rgba(255,255,255,0.3)"
-                          : "rgba(255,255,255,0.1)",
-                      textTransform: "none",
-                      "&:hover": {
-                        background: "rgba(255,255,255,0.25)",
-                        borderColor: "rgba(255,255,255,0.5)",
-                      },
-                    }}
-                  >
-                    Auto Move
-                  </Button>
-                </ButtonGroup>
-              </Box>
-            </Box>
-
-            <Typography
-              sx={{
-                opacity: 0.5,
-                mt: 1.5,
-                fontSize: 13,
-                color: "white",
-                textAlign: { xs: "center", sm: "left" },
-              }}
-            >
-              {mode === "manual"
-                ? "Move your cursor to play!"
-                : "Toy roams freely — sit back!"}
-            </Typography>
-          </Box>
-
-          {/* Tabs */}
-          <Tabs
-            value={panelTab}
-            onChange={(_, v) => setPanelTab(v)}
-            textColor="inherit"
-            sx={{
-              borderBottom: "1px solid rgba(255,255,255,0.1)",
-              minHeight: 40,
-              "& .MuiTab-root": {
-                color: "rgba(255,255,255,0.6)",
-                fontSize: 12,
-                fontWeight: 600,
-                minHeight: 40,
-                py: 0,
-              },
-              "& .Mui-selected": { color: "white" },
-              "& .MuiTabs-indicator": { backgroundColor: "white" },
-            }}
-          >
-            <Tab label="⚙️ Tune" value="tune" />
-            <Tab label="🎯 Cursor" value="cursor" />
-            <Tab label="🖼 Scenes" value="bg" />
-            <Tab label="🔊 Sound" value="sound" />
-          </Tabs>
-
-          <Box sx={{ p: 1.75 }}>
-            <LookControls
-              tab={panelTab}
-              onPlaySound={() => playWithPing(soundId, volume)}
-              look={look}
-              onChange={updateLook}
-              tuneExtra={
-                mode === "auto" && (
-                  <>
-                    <Divider
-                      sx={{ borderColor: "rgba(255,255,255,0.1)", my: 2 }}
-                    />
-                    <Slider
-                      label="Auto Speed"
-                      value={autoSpeed}
-                      min={1}
-                      max={100}
-                      step={1}
-                      onChange={setAutoSpeed}
-                      fmt={(v) =>
-                        v < 25
-                          ? "🐢 Lazy"
-                          : v < 55
-                            ? "🐱 Normal"
-                            : v < 80
-                              ? "🐇 Zippy"
-                              : "⚡ Frenzy"
-                      }
-                    />
-                  </>
-                )
-              }
-            />
-          </Box>
-        </Paper>
-      )}
-
-      {/* Toggle button (+ Auto Move indicator while the panel is hidden) */}
+      {/* Browsers keep audio muted until the page is clicked once. */}
       <Box
-        className="cat-ui"
         sx={{
           position: "fixed",
           bottom: 20,
           left: 20,
-          display: "flex",
-          alignItems: "center",
-          gap: 1,
           zIndex: 10001,
         }}
       >
-        <Button
-          onClick={() => setShowPanel((p) => !p)}
-          startIcon={showPanel ? <VisibilityOffIcon /> : <VisibilityIcon />}
-          sx={{
-            px: 3,
-            py: 1.25,
-            background: "rgba(0,0,0,0.45)",
-            border: "1px solid rgba(255,255,255,0.3)",
-            color: "white",
-            borderRadius: 5,
-            backdropFilter: "blur(10px)",
-            fontSize: 14,
-            textTransform: "none",
-            whiteSpace: "nowrap",
-            "&:hover": { background: "rgba(0,0,0,0.65)" },
-          }}
-        >
-          {showPanel ? "Hide Controls" : "Show Controls"}
-        </Button>
-
-        {!showPanel && mode === "auto" && !remoteActive && (
-          <Box
-            sx={{
-              display: "flex",
-              alignItems: "center",
-              gap: 0.75,
-              px: 2,
-              py: 1.25,
-              background: "rgba(0,0,0,0.45)",
-              border: "1px solid rgba(255,255,255,0.3)",
-              color: "white",
-              borderRadius: 5,
-              backdropFilter: "blur(10px)",
-              fontSize: 14,
-              lineHeight: 1.75,
-              whiteSpace: "nowrap",
-              animation: "panelSlide 0.3s ease",
-            }}
-          >
-            <SmartToyOutlined sx={{ fontSize: 18 }} />
-            Auto Move on
-          </Box>
-        )}
-
         {soundId !== "none" && !audioOn && (
           <Button
             onClick={unlockAudio}
